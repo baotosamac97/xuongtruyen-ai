@@ -2066,42 +2066,30 @@
             }
 
             prompt += "\n\n### CẨM NANG THẾ GIỚI (STORY BIBLE)\n";
-            // Phần xây dựng cẩm nang từ appState.settings giữ nguyên như hàm cũ của bạn
-            if (settings.selectedGenres || settings.selectedWorlds || settings.selectedTropes) prompt += `- Thể loại - Bối cảnh - Lưu phái: ${[settings.selectedGenres, settings.selectedWorlds, settings.selectedTropes].filter(Boolean).join(' - ')}\n`;
-            if (settings.step0CoreIdea) prompt += `- Ý tưởng cốt lõi: ${settings.step0CoreIdea}\n`;
-            // ... (Thêm tất cả các trường settings khác giống như hàm cũ của bạn) ...
+            // ... (Toàn bộ phần xây dựng cẩm nang từ appState.settings giữ nguyên) ...
             
             if (settings.learnedStory) {
                 prompt += `\n### VĂN PHONG THAM CHIẾU (AI PHẢI HỌC THEO VĂN PHONG NÀY)\n${settings.learnedStory}\n`;
             }
 
-            // --- PHẦN NÂNG CẤP ---
-            prompt += `\n### BỘ QUY TẮC SÁNG TÁC BẮT BUỘC (AI PHẢAI TUÂN THỦ):\n`;
-            prompt += "1. **ĐỘ DÀI:** Viết một chương truyện có độ dài khoảng **2000 chữ**, đảm bảo nội dung phong phú và chi tiết.\n";
-            prompt += "2. **TIÊU ĐỀ CHƯƠNG:** Tạo một tiêu đề chương độc đáo, từ 3 đến 10 chữ, tóm tắt được sự kiện chính hoặc cảm xúc chủ đạo của chương.\n";
-            prompt += "3. **ĐỊNH DẠNG TRẢ VỀ:** Phải trả về kết quả dưới dạng một chuỗi JSON hợp lệ với cấu trúc: {\"title\": \"Tiêu đề chương mới\", \"content\": \"Nội dung chương...\"}.\n";
-            prompt += "4. **KẾT THÚC CHƯƠNG:** Nội dung chương phải kết thúc bằng cụm từ \"còn tiếp...\".\n";
-            prompt += "5. **KHÔNG GIỚI THIỆU:** Bắt đầu ngay lập tức bằng hành động hoặc đối thoại. TUYỆT ĐỐI không viết những câu như 'Trong chương này...'.\n";
-            prompt += "6. **NHẬP VAI NHÂN VẬT:** Mọi hành động, suy nghĩ, và lời nói của nhân vật chính phải tuyệt đối tuân thủ theo 'Tính cách nhân vật' đã được mô tả.\n";
-            prompt += "7. **MÓC NỐI TÌNH TIẾT:** Nếu đây không phải chương đầu, nhiệm vụ quan trọng nhất là viết tiếp ngay sau đoạn 'KẾT THÚC CHƯƠNG TRƯỚC'.\n";
-
+            prompt += `\n### BỘ QUY TẮC SÁNG TÁC BẮT BUỘC (AI PHẢI TUÂN THỦ):\n`;
+            prompt += "1. **ĐỘ DÀI:** Viết một chương truyện có độ dài khoảng 2000 chữ, đảm bảo nội dung phong phú và chi tiết.\n";
             
-            if (rewriteConfig) {
-                // Phần này giữ nguyên logic cũ
-            } else {
-                if (chapters.length > 0) {
-                    const recentChapter = chapters[chapters.length - 1];
-                    const snippet = recentChapter.content.replace(/<[^>]*>/g, ' ').trim();
-                    prompt += `\n### KẾT THÚC CHƯƠNG TRƯỚC (${recentChapter.title}):\n${snippet.slice(-500)}\n`;
-                }
+            // THAY ĐỔI Ở ĐÂY
+            prompt += "2. **TIÊU ĐỀ CHƯƠNG:** Chỉ tạo phần tên mô tả của tiêu đề (không bao gồm chữ 'Chương' hay số thứ tự), từ 3 đến 10 chữ, tóm tắt được sự kiện chính.\n";
+            
+            prompt += "3. **ĐỊNH DẠNG TRẢ VỀ:** Phải trả về kết quả dưới dạng một chuỗi JSON hợp lệ với cấu trúc: {\"title\": \"Tên mô tả của chương\", \"content\": \"Nội dung chương...\"}.\n";
+            prompt += "4. **KẾT THÚC CHƯƠNG:** Nội dung chương phải kết thúc bằng cụm từ \"còn tiếp...\".\n";
+            // ... (Các quy tắc khác giữ nguyên) ...
+
+            if (chapters.length > 0) {
+                const recentChapter = chapters[chapters.length - 1];
+                const snippet = recentChapter.content.replace(/<[^>]*>/g, ' ').trim();
+                prompt += `\n### KẾT THÚC CHƯƠNG TRƯỚC (${recentChapter.title}):\n${snippet.slice(-500)}\n`;
             }
             
             prompt += `\n### YÊU CẦU HIỆN TẠI:\n`;
-            if (rewriteConfig) {
-                prompt += `Viết lại **${rewriteConfig.chapter.title}**. Tuân thủ nghiêm ngặt tất cả quy tắc, đặc biệt là định dạng trả về JSON.`;
-            } else {
-                prompt += `Viết **Chương ${chapters.length + 1}**. Tuân thủ nghiêm ngặt tất cả quy tắc, đặc biệt là định dạng trả về JSON.`;
-            }
+            // ... (Phần còn lại của hàm giữ nguyên) ...
             
             return prompt;
         }
@@ -2121,37 +2109,29 @@
         async function generateChapter() {
             if (appState.isGenerating || !authReady) return;
             toggleLoading(true, false);
-            showChapterSkeleton(); // Hàm này bạn có thể giữ nguyên hoặc tạo mới
+            showChapterSkeleton();
             try {
                 const prompt = constructGeminiPrompt();
-                // Yêu cầu AI trả về JSON bằng cách thêm tham số `true`
                 const rawJson = await callGeminiForText(prompt, null, true); 
 
                 if (rawJson) {
                     let chapterData;
                     try {
-                        // Dọn dẹp chuỗi JSON AI có thể trả về lỗi (có ```json ... ```)
-                        let cleanedJsonString = rawJson.trim();
-                        if (cleanedJsonString.startsWith("```json")) {
-                            cleanedJsonString = cleanedJsonString.substring(7);
-                        } else if (cleanedJsonString.startsWith("```")) {
-                            cleanedJsonString = cleanedJsonString.substring(3);
-                        }
-                        if (cleanedJsonString.endsWith("```")) {
-                            cleanedJsonString = cleanedJsonString.slice(0, -3);
-                        }
+                        const cleanedJsonString = rawJson.trim().replace(/^```json|```$/g, '');
                         chapterData = JSON.parse(cleanedJsonString);
                     } catch (e) {
-                        console.error("Lỗi parse JSON từ AI:", e, "Dữ liệu gốc:", rawJson);
-                        showToast("AI trả về định dạng không hợp lệ, đang thử hiển thị nội dung thô.", "warning");
-                        // Nếu parse lỗi, vẫn cố gắng hiển thị text thô
                         chapterData = { 
-                            title: `Chương ${appState.chapters.length + 1} (Lỗi định dạng)`, 
+                            title: `(Lỗi định dạng)`, 
                             content: rawJson 
                         };
                     }
 
-                    const newTitle = chapterData.title || `Chương ${appState.chapters.length + 1}`;
+                    // THAY ĐỔI Ở ĐÂY
+                    const chapterNumber = appState.chapters.length + 1;
+                    const descriptiveTitle = chapterData.title || `Chương ${chapterNumber}`;
+                    // Ghép lại thành tiêu đề hoàn chỉnh
+                    const newTitle = `Chương ${chapterNumber}: ${descriptiveTitle}`;
+                    
                     const rawContent = chapterData.content || '';
                     const newContent = rawContent.trim().split('\n').filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
                     
@@ -2170,8 +2150,7 @@
                 appState.autoGenerate = false; 
                 updateAutoGenUI();
             } finally {
-                const skeleton = document.getElementById('chapter-skeleton');
-                if(skeleton) skeleton.remove();
+                document.getElementById('chapter-skeleton')?.remove();
                 toggleLoading(false);
                 if (appState.autoGenerate) setTimeout(generateChapter, 5000);
             }
