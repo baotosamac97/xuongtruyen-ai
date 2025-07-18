@@ -42,6 +42,14 @@
         }
     </script>
     <style>
+		#reading-mode-content {
+		text-align: justify; /* Canh đều hai bên */
+		line-height: 1.8; /* Tăng khoảng cách dòng */
+		letter-spacing: 0.5px; /* Tăng khoảng cách chữ */
+		}
+		#reading-mode-content p {
+			margin-bottom: 1.25em; /* Thêm khoảng cách giữa các đoạn văn */
+		}
         body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #181818; }
@@ -479,21 +487,36 @@
         </div>
 
         <div id="reading-mode-view" class="fixed inset-0 bg-primary p-4 sm:p-8 lg:p-12 z-50 hidden opacity-0 font-sans theme-dark">
-            <div id="reading-toolbar" class="fixed top-4 left-1/2 -translate-x-1/2 bg-secondary/80 backdrop-blur-sm p-2 rounded-full flex items-center gap-2 z-10">
-                <button id="reading-chapter-list-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg" title="Danh sách chương"><i class="fa-solid fa-list-ul"></i></button>
-                <div class="w-px h-5 bg-tertiary"></div>
-                <button id="reading-font-btn" data-font="sans" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg" title="Đổi Font Chữ"><i class="fa-solid fa-font"></i></button>
-                <div class="w-px h-5 bg-tertiary"></div>
-                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-primary border-2" data-theme="dark" title="Nền Tối"></button>
-                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-light" data-theme="light" title="Nền Sáng"></button>
-                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-sepia" data-theme="sepia" title="Nền Sepia"></button>
-                <div class="w-px h-5 bg-tertiary"></div>
-                <button id="export-story-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tải Truyện"><i class="fa-solid fa-download"></i></button>
-                <button id="feedback-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Góp Ý & Viết Lại"><i class="fa-solid fa-comment-dots"></i></button>
-                <button id="reading-mode-new-chapter-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tạo Chương Mới"><i class="fa-solid fa-plus"></i></button>
-                <div class="w-px h-5 bg-tertiary"></div>
-                <button id="exit-reading-mode-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Thoát"><i class="fa-solid fa-times"></i></button>
-            </div>
+            <div id="reading-toolbar" class="fixed top-4 left-1/2 -translate-x-1/2 bg-secondary/80 backdrop-blur-sm p-2 rounded-full flex items-center gap-1 z-10">
+				<button id="reading-chapter-list-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg" title="Danh sách chương"><i class="fa-solid fa-list-ul"></i></button>
+				<div class="w-px h-5 bg-tertiary"></div>
+
+				<div class="relative">
+					<button id="font-settings-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg" title="Tùy chỉnh Font"><i class="fa-solid fa-font"></i></button>
+					<div id="font-settings-popup" class="hidden absolute bottom-14 left-1/2 -translate-x-1/2 bg-secondary border border-tertiary rounded-lg shadow-lg w-64 p-4">
+						<p class="text-sm font-medium text-text-secondary mb-2">Font chữ</p>
+						<select id="font-family-select" class="w-full bg-tertiary rounded p-2 text-sm mb-3"></select>
+
+						<p class="text-sm font-medium text-text-secondary mb-2">Kích thước chữ</p>
+						<div class="flex items-center gap-2">
+							<button id="decrease-font-size-btn" class="w-8 h-8 bg-tertiary rounded">-</button>
+							<span id="font-size-label" class="flex-grow text-center">18px</span>
+							<button id="increase-font-size-btn" class="w-8 h-8 bg-tertiary rounded">+</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="w-px h-5 bg-tertiary"></div>
+				<button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-primary border-2" data-theme="dark" title="Nền Tối"></button>
+				<button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-light" data-theme="light" title="Nền Sáng"></button>
+				<button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-sepia" data-theme="sepia" title="Nền Sepia"></button>
+				<div class="w-px h-5 bg-tertiary"></div>
+				<button id="export-story-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tải Truyện"><i class="fa-solid fa-download"></i></button>
+				<button id="feedback-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Góp Ý & Viết Lại"><i class="fa-solid fa-comment-dots"></i></button>
+				<button id="reading-mode-new-chapter-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tạo Chương Mới"><i class="fa-solid fa-plus"></i></button>
+				<div class="w-px h-5 bg-tertiary"></div>
+				<button id="exit-reading-mode-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Thoát"><i class="fa-solid fa-times"></i></button>
+			</div>
             
             <div id="reading-chapter-list-popup" class="hidden absolute top-20 left-1/2 -translate-x-1/2 bg-secondary border border-tertiary rounded-lg shadow-lg w-full max-w-xs max-h-80 overflow-y-auto p-2 z-10">
                 <!-- Chapter list will be populated here -->
@@ -584,6 +607,23 @@
 
         let app, db, auth, userId = null, authReady = false;
 
+		const FONT_OPTIONS = {
+            "Source Serif Pro": "'Source Serif Pro', serif",
+            "Merriweather": "'Merriweather', serif",
+            "Lora": "'Lora', serif",
+            "Inter": "'Inter', sans-serif",
+            "Roboto": "'Roboto', sans-serif",
+            "Open Sans": "'Open Sans', sans-serif",
+            "Montserrat": "'Montserrat', sans-serif",
+            "Be Vietnam Pro": "'Be Vietnam Pro', sans-serif"
+        };
+        
+        // Tự động thêm link Google Fonts cần thiết vào thẻ <head>
+        const fontLink = document.createElement('link');
+        fontLink.href = "https://fonts.googleapis.com/css2?family=Inter&family=Lora&family=Merriweather&family=Montserrat&family=Open+Sans&family=Roboto&family=Source+Serif+Pro&display=swap";
+        fontLink.rel = "stylesheet";
+        document.head.appendChild(fontLink);
+
         const TAG_DEFINITIONS = {
             genre: ['Tiên Hiệp', 'Huyền Huyễn', 'Kiếm Hiệp', 'Đô Thị', 'Khoa Huyễn', 'Mạt Thế', 'Lịch Sử', 'Quân Sự', 'Dị Năng', 'Võng Du', 'Đồng Nhân', 'Trọng Sinh', 'Ngôn Tình'],
             world: ['Đông Phương', 'Tây Phương', 'Hiện Đại', 'Tương Lai', 'Dị Giới', 'Mạt Thế', 'Vườn Trường', 'Quân Lữ', 'Hắc Bang'],
@@ -625,6 +665,8 @@
                 highlightedElement: null, utteranceQueue: [], playerStatus: 'stopped'
             },
             readingMode: {
+				fontFamily: "'Be Vietnam Pro', sans-serif",
+                fontSize: 18,
                 font: 'sans', // 'sans' or 'serif'
                 theme: 'dark', // 'dark', 'light', 'sepia'
                 lastReadChapterId: null,
@@ -833,15 +875,18 @@
 
         function applyReadingModeSettings() {
             const view = DOMElements.readingModeView;
-            view.classList.remove('font-sans', 'font-serif', 'theme-dark', 'theme-light', 'theme-sepia');
-            view.classList.add(`font-${appState.readingMode.font}`);
+            const content = DOMElements.readingModeContent;
+            
+            view.classList.remove('theme-dark', 'theme-light', 'theme-sepia');
             view.classList.add(`theme-${appState.readingMode.theme}`);
 
+            // Áp dụng font chữ và kích thước
+            content.style.fontFamily = appState.readingMode.fontFamily;
+            content.style.fontSize = `${appState.readingMode.fontSize}px`;
+            DOMElements.fontSizeLabel.textContent = `${appState.readingMode.fontSize}px`;
+
             document.querySelectorAll('.theme-btn').forEach(btn => {
-                btn.classList.remove('border-accent-blue');
-                if (btn.dataset.theme === appState.readingMode.theme) {
-                    btn.classList.add('border-accent-blue');
-                }
+                btn.classList.toggle('border-accent-blue', btn.dataset.theme === appState.readingMode.theme);
             });
             saveSettings();
         }
@@ -1885,11 +1930,64 @@
         }
         
         function setupReadingModeListeners() {
-            DOMElements.readingFontBtn.addEventListener('click', () => {
-                appState.readingMode.font = appState.readingMode.font === 'sans' ? 'serif' : 'sans';
+            const fontSelect = DOMElements.fontFamilySelect;
+            
+            // --- PHẦN MỚI: Xử lý các tính năng Font ---
+            
+            // Tạo danh sách các lựa chọn font chữ
+            Object.keys(FONT_OPTIONS).forEach(fontName => {
+                const option = document.createElement('option');
+                option.value = FONT_OPTIONS[fontName];
+                option.textContent = fontName;
+                if (appState.readingMode.fontFamily === FONT_OPTIONS[fontName]) {
+                    option.selected = true;
+                }
+                fontSelect.appendChild(option);
+            });
+
+            // Gán sự kiện khi người dùng chọn font mới
+            fontSelect.addEventListener('change', (e) => {
+                appState.readingMode.fontFamily = e.target.value;
                 applyReadingModeSettings();
             });
 
+            // Gán sự kiện cho nút tăng kích thước chữ
+            DOMElements.increaseFontSizeBtn.addEventListener('click', () => {
+                if (appState.readingMode.fontSize < 30) {
+                    appState.readingMode.fontSize += 1;
+                    applyReadingModeSettings();
+                }
+            });
+
+            // Gán sự kiện cho nút giảm kích thước chữ
+            DOMElements.decreaseFontSizeBtn.addEventListener('click', () => {
+                if (appState.readingMode.fontSize > 12) {
+                    appState.readingMode.fontSize -= 1;
+                    applyReadingModeSettings();
+                }
+            });
+            
+            // Gán sự kiện để mở/đóng popup cài đặt font
+            DOMElements.fontSettingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                DOMElements.fontSettingsPopup.classList.toggle('hidden');
+            });
+            
+            // Đóng popup nếu nhấn ra ngoài
+            document.body.addEventListener('click', () => {
+                if(DOMElements.fontSettingsPopup) DOMElements.fontSettingsPopup.classList.add('hidden');
+            });
+            DOMElements.fontSettingsPopup.addEventListener('click', (e) => e.stopPropagation());
+
+            // --- PHẦN CŨ: Giữ lại các trình xử lý sự kiện đã có ---
+
+            // Nút đổi Font cũ (bây giờ được thay bằng popup, nhưng giữ lại listener có thể không gây hại)
+            DOMElements.readingFontBtn.addEventListener('click', () => {
+                appState.readingMode.font = appState.readingMode.font === 'sans' ? 'serif' : 'sans';
+                // Chú ý: Hàm applyReadingModeSettings mới không còn dùng appState.readingMode.font
+            });
+            
+            // Các nút đổi theme (Sáng/Tối/Sepia)
             DOMElements.readingToolbar.querySelectorAll('.theme-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     appState.readingMode.theme = btn.dataset.theme;
@@ -1897,28 +1995,34 @@
                 });
             });
 
+            // Nút mở danh sách chương
             DOMElements.readingChapterListBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 DOMElements.readingChapterListPopup.classList.toggle('hidden');
             });
             
+            // Đóng danh sách chương khi nhấn vào nền
             DOMElements.readingModeView.addEventListener('click', () => {
                  DOMElements.readingChapterListPopup.classList.add('hidden');
             });
 
+            // Nút tạo chương mới
             DOMElements.readingModeNewChapterBtn.addEventListener('click', () => {
                 exitReadingMode();
                 generateChapter();
             });
 
+            // Nút mở modal xuất file
             DOMElements.exportStoryBtn.addEventListener('click', () => {
                 DOMElements.exportModal.classList.remove('hidden');
             });
-
+            
+            // Nút hủy trong modal xuất file
             DOMElements.exportModalCancelBtn.addEventListener('click', () => {
                 DOMElements.exportModal.classList.add('hidden');
             });
-            
+
+            // Nút mở modal góp ý
             DOMElements.feedbackBtn.addEventListener('click', () => {
                 if (!appState.readingMode.currentVisibleChapterId) {
                     showToast("Không xác định được chương hiện tại.", "info");
@@ -1927,10 +2031,12 @@
                  DOMElements.feedbackModal.classList.remove('hidden');
             });
             
+            // Nút hủy trong modal góp ý
             DOMElements.feedbackModalCancelBtn.addEventListener('click', () => {
                 DOMElements.feedbackModal.classList.add('hidden');
             });
 
+            // Nút gửi góp ý
             DOMElements.feedbackModalSubmitBtn.addEventListener('click', async () => {
                 const feedbackText = DOMElements.feedbackTextarea.value;
                 if (!feedbackText.trim()) {
@@ -1951,16 +2057,22 @@
                 const rawText = await callGeminiForText(prompt);
 
                 if (rawText) {
-                    const sanitizedText = rawText.replace(/[\*\_#\[\]\(\)`]/g, '');
-                    const newContent = sanitizedText.trim().split('\n').filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
-                    await updateChapter(chapterId, newContent);
-                    showToast(`Đã viết lại "${chapter.title}"!`, 'success');
-                    selectChapter(chapterId); // Reselect to update main view
+                    // Xử lý logic JSON nếu có
+                    try {
+                        let cleanedJsonString = rawText.trim().replace(/^```json|```$/g, '');
+                        const chapterData = JSON.parse(cleanedJsonString);
+                        const newContent = (chapterData.content || '').trim().split('\n').filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
+                        await updateChapter(chapterId, newContent);
+                        showToast(`Đã viết lại "${chapter.title}"!`, 'success');
+                        selectChapter(chapterId);
+                    } catch (e) {
+                         showToast('Lỗi xử lý phản hồi AI để viết lại chương.', 'error');
+                    }
                 }
                 toggleLoading(false, true);
-
             });
 
+            // Theo dõi vị trí cuộn
             DOMElements.readingModeContent.addEventListener('scroll', () => {
                 clearTimeout(scrollSaveTimeout);
                 scrollSaveTimeout = setTimeout(() => {
