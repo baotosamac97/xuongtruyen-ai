@@ -1,0 +1,2303 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xưởng Truyện AI 14.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;800&family=Source+Serif+4:opsz,wght@8..60,400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // Tailwind CSS configuration
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Be Vietnam Pro', 'sans-serif'],
+                        serif: ['Source Serif 4', 'serif'],
+                    },
+                    colors: {
+                        'primary': '#101010', 
+                        'secondary': '#181818', 
+                        'tertiary': '#282828', 
+                        'text-main': '#E5E7EB', 
+                        'text-secondary': '#A1A1AA', 
+                        'accent': {
+                            'pink': '#F43F5E',
+                            'blue': '#3B82F6',
+                            'green': '#22C55E',
+                            'yellow': '#EAB308',
+                            'purple': '#8B5CF6',
+                        },
+                        'danger': '#EF4444',
+                        'bg-light': '#FFFFFF',
+                        'text-light': '#181818',
+                        'bg-sepia': '#FBF5E9',
+                        'text-sepia': '#5B4636',
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #181818; }
+        ::-webkit-scrollbar-thumb { background: #282828; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        
+        #sidebar { transition: transform 0.3s ease-in-out, width 0.3s ease-in-out; }
+        .sidebar-overlay { transition: opacity 0.3s ease-in-out; }
+
+        [contenteditable]:focus { outline: 2px solid #3B82F6; }
+        
+        .loader { border: 4px solid #282828; border-top: 4px solid #F43F5E; border-radius: 50%; width: 48px; height: 48px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .speaking-highlight { background-color: rgba(59, 130, 246, 0.2); border-radius: 4px; transition: background-color 0.3s; }
+        .chapter-item.selected { background-color: #3B82F6; color: #FFFFFF; }
+        .chapter-item.selected .text-text-secondary { color: #E5E7EB; }
+        .chapter-item { transition: background-color 0.2s ease-in-out; }
+
+        .fab { box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.3), 0 4px 6px -2px rgba(244, 63, 94, 0.2); transition: transform 0.2s ease, background-color 0.2s ease; }
+        .fab:active { transform: scale(0.95); }
+        
+        #app-container.focus-mode #sidebar { width: 0; padding: 0; overflow: hidden; border-right: none; }
+        #app-container.focus-mode { grid-template-columns: 0 1fr; }
+        #app-container.focus-mode #menu-toggle-btn, #app-container.focus-mode #generate-chapter-btn { display: none; }
+        
+        .input-label { display: block; font-weight: 500; color: #A1A1AA; margin-bottom: 4px; font-size: 0.875rem; }
+        .tag-btn { background-color: #282828; border: 1px solid #3f3f46; transition: all 0.2s ease; }
+        .tag-btn:hover { background-color: #3f3f46; border-color: #52525b; }
+        .tag-btn.active { background-color: #3B82F6; color: #FFFFFF; border-color: #3B82F6; }
+        
+        .tab-button { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+        .tab-button.active { color: #3B82F6; border-bottom-color: #3B82F6; }
+        .tab-content { display: none; animation: fadeIn 0.5s; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .skeleton-loader { background-color: #282828; border-radius: 0.5rem; animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+        .brainstorm-btn {
+            position: absolute; 
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            background-color: #282828; border: 1px solid #3f3f46; border-radius: 9999px;
+            color: #EAB308; transition: all 0.2s ease;
+        }
+        .brainstorm-btn:hover { background-color: #3f3f46; transform: translateY(-50%) scale(1.1); }
+        .brainstorm-btn.ai-loading { animation: spin 1s linear infinite; }
+        
+        .ai-tool-btn, .reading-toolbar-btn {
+            background-color: transparent; color: #A1A1AA; padding: 4px; border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .ai-tool-btn:hover, .reading-toolbar-btn:hover { background-color: #282828; color: #E5E7EB; }
+        .ai-tool-btn:disabled, .reading-toolbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ai-tool-btn.ai-loading i { animation: spin 1s linear infinite; }
+        
+        .suggestion-dropdown {
+            display: none;
+            position: absolute;
+            background-color: #181818;
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            z-index: 10;
+            width: 220px;
+        }
+        .suggestion-dropdown button {
+            display: block; width: 100%; text-align: left;
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            color: #E5E7EB;
+        }
+        .suggestion-dropdown button:hover { background-color: #282828; }
+        .suggestion-dropdown button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #reading-mode-view { transition: opacity 0.3s ease-in-out; }
+        #reading-mode-view.font-serif #reading-mode-content { font-family: 'Source Serif 4', serif; }
+        #reading-mode-view.font-sans #reading-mode-content { font-family: 'Be Vietnam Pro', sans-serif; }
+        #reading-mode-view.theme-dark { background-color: #101010; color: #E5E7EB; }
+        #reading-mode-view.theme-light { background-color: #FFFFFF; color: #181818; }
+        #reading-mode-view.theme-sepia { background-color: #FBF5E9; color: #5B4636; }
+        #reading-mode-view.theme-light .reading-toolbar-btn, #reading-mode-view.theme-sepia .reading-toolbar-btn { color: #5B4636; }
+        #reading-mode-view.theme-light .reading-toolbar-btn:hover, #reading-mode-view.theme-sepia .reading-toolbar-btn:hover { background-color: rgba(0,0,0,0.1); }
+        #reading-mode-view.theme-light #reading-toolbar, #reading-mode-view.theme-sepia #reading-toolbar { background-color: rgba(255,255,255,0.8); }
+
+        .reading-toolbar-btn.active { color: #3B82F6; }
+
+        .chat-bubble { max-width: 80%; }
+        .chat-bubble-user { background-color: #3B82F6; color: white; }
+        .chat-bubble-ai { background-color: #282828; color: #E5E7EB; }
+        .chat-thinking-bubble { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+    </style>
+</head>
+<body class="bg-primary text-text-main font-sans">
+
+    <div id="app-container" class="relative min-h-screen lg:grid lg:grid-cols-[380px_1fr] transition-all duration-300">
+        
+        <div id="sidebar-overlay" class="lg:hidden fixed inset-0 bg-black/50 z-30 opacity-0 pointer-events-none"></div>
+
+        <button id="menu-toggle-btn" class="lg:hidden fixed top-4 left-4 z-40 p-2 bg-secondary/80 backdrop-blur-sm border border-tertiary rounded-lg">
+            <i class="fa-solid fa-bars w-6 h-6 flex items-center justify-center text-xl"></i>
+        </button>
+
+        <aside id="sidebar" class="fixed top-0 left-0 w-full max-w-[320px] sm:max-w-sm h-full bg-secondary z-40 transform -translate-x-full lg:relative lg:translate-x-0 lg:max-w-none flex flex-col border-r border-tertiary">
+            <div class="flex items-center justify-between mb-4 flex-shrink-0 p-4 pb-0">
+                 <h1 class="text-2xl font-bold text-white">Xưởng Truyện <span class="text-accent-pink">AI</span></h1>
+                 <button id="close-menu-btn" class="lg:hidden text-text-secondary hover:text-white">
+                    <i class="fa-solid fa-times text-2xl"></i>
+                 </button>
+            </div>
+            
+            <div id="sidebar-content-wrapper" class="relative overflow-y-auto flex-grow pr-2 pl-4 space-y-6">
+                 <div id="sidebar-loading-overlay" class="absolute inset-0 bg-secondary/80 backdrop-blur-sm flex-col items-center justify-center z-20 hidden">
+                    <div class="loader"></div>
+                    <p class="mt-4 text-text-secondary">AI đang sáng tạo cẩm nang...</p>
+                 </div>
+                
+                <section>
+                    <div class="flex justify-between items-center mb-3 mt-4">
+                        <h2 class="text-sm font-semibold uppercase text-text-secondary tracking-wider">Cài Đặt Truyện</h2>
+                        <div class="relative">
+                            <button id="suggestion-engine-btn" title="AI Gợi Ý Nhanh" class="ai-tool-btn px-2 py-1 bg-tertiary">
+                                ✨ AI Gợi Ý Nhanh
+                            </button>
+                            <div id="suggestion-dropdown-menu" class="suggestion-dropdown right-0 mt-2">
+                                <button id="suggest-all-btn">
+                                    <i class="fa-solid fa-wand-magic-sparkles w-4 mr-2"></i>Gợi Ý Toàn Bộ
+                                </button>
+                                <button id="suggest-partial-btn">
+                                    <i class="fa-solid fa-pen-to-square w-4 mr-2"></i>Gợi Ý Dựa Trên Thông Tin
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-b border-tertiary mb-4">
+                        <nav id="settings-tabs" class="flex space-x-4" aria-label="Tabs">
+                            <button class="tab-button py-2 px-1 text-sm font-medium text-text-secondary hover:text-white" data-tab="basic">CƠ BẢN</button>
+                            <button class="tab-button py-2 px-1 text-sm font-medium text-text-secondary hover:text-white" data-tab="world">THẾ GIỚI</button>
+                            <button class="tab-button py-2 px-1 text-sm font-medium text-text-secondary hover:text-white" data-tab="plot">CỐT TRUYỆN</button>
+                            <button class="tab-button py-2 px-1 text-sm font-medium text-text-secondary hover:text-white" data-tab="advanced">NÂNG CAO</button>
+                        </nav>
+                    </div>
+
+                    <div id="settings-tab-content">
+                        <div id="tab-content-basic" class="tab-content space-y-4">
+                            <div>
+                                <label class="input-label">1. Thể loại - Bối cảnh - Lưu phái</label>
+                                <div class="p-3 bg-primary border border-tertiary rounded-md space-y-3">
+                                    <input type="text" id="display-genre" readonly class="w-full p-2 bg-secondary border border-tertiary rounded-md text-sm" placeholder="Chọn thể loại sáng tác">
+                                    <div id="tags-genre" class="flex flex-wrap gap-2"></div>
+                                    <input type="text" id="display-world" readonly class="w-full p-2 mt-1 bg-secondary border border-tertiary rounded-md text-sm" placeholder="Chọn bối cảnh sáng tác">
+                                    <div id="tags-world" class="flex flex-wrap gap-2"></div>
+                                    <input type="text" id="display-trope" readonly class="w-full p-2 mt-1 bg-secondary border border-tertiary rounded-md text-sm" placeholder="Chọn lưu phái / tình tiết">
+                                    <div id="tags-trope" class="flex flex-wrap gap-2"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="setting-step0CoreIdea" class="input-label">2. Ý tưởng cốt lõi</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step0CoreIdea" rows="3" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Tóm tắt độc đáo nhất về truyện, càng dị càng tốt. (Ví dụ: Tu tiên trong thế giới cyberpunk, Nhân vật chính là một cái xác sống…)"></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step0CoreIdea" data-prompt-type="core-idea" title="✨ Gợi ý ý tưởng">✨</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="setting-step0Theme" class="input-label">3. Chủ đề & Triết lý</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step0Theme" rows="3" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Thông điệp hoặc tư tưởng sâu sắc mà truyện muốn truyền tải. (Ví dụ: Cô độc trên đỉnh cao, Đấu tranh giữa tự do và định mệnh…)"></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step0Theme" data-prompt-type="theme" title="✨ Gợi ý chủ đề">✨</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="setting-step1McOrigin" class="input-label">4. Nhân vật chính - Tên và Xuất thân</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step1McOrigin" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Ví dụ: Lâm Phong – Phế vật bị hủy đan điền, bị từ hôn, sống ở tiểu quốc"></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step1McOrigin" data-prompt-type="mc-origin" title="✨ Gợi ý nhân vật">✨</button>
+                                </div>
+                            </div>
+                           <div>
+                                <label for="setting-step1McPersonality" class="input-label">5. Tính cách nhân vật</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step1McPersonality" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Tóm tắt vài nét cốt lõi: (Ví dụ: Cẩn trọng, Lạnh lùng, Hài hước...)"></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step1McPersonality" data-prompt-type="mc-personality" title="✨ Gợi ý tính cách">✨</button>
+                                </div>
+                            </div>
+                            <div><label for="setting-step1McHobbies" class="input-label">6. Sở thích, hành vi đặc trưng</label><textarea id="setting-step1McHobbies" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Thích uống trà, Trêu chọc người khác, Hay đọc sách cổ"></textarea></div>
+                            <div>
+                                <label for="setting-step1McGoal" class="input-label">7. Mục tiêu cuối cùng</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step1McGoal" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Ví dụ: Trường sinh, Báo thù, Xây dựng tông môn riêng..."></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step1McGoal" data-prompt-type="mc-goal" title="✨ Gợi ý mục tiêu">✨</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="setting-step1McAdvantage" class="input-label">8. Bàn tay vàng (lợi thế đặc biệt)</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step1McAdvantage" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Ví dụ: Hệ thống trong đầu, Trùng sinh về quá khứ, Có thể nhìn thấy tương lai"></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step1McAdvantage" data-prompt-type="mc-advantage" title="✨ Gợi ý bàn tay vàng">✨</button>
+                                </div>
+                            </div>
+                            <div><label for="setting-step1McAdvantageFlaw" class="input-label">9. Khuyết điểm hoặc cái giá của bàn tay vàng (nếu có)</label><textarea id="setting-step1McAdvantageFlaw" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Mỗi lần dùng là mất ký ức, Phải hấp thu sinh mệnh người khác..."></textarea></div>
+                            <button id="character-chat-btn" class="w-full mt-2 bg-accent-yellow/20 text-accent-yellow p-2 rounded-md hover:bg-accent-yellow/30 flex items-center justify-center gap-2 transition-colors">
+                                <i class="fa-solid fa-comments"></i> ✨ Trò chuyện với nhân vật
+                            </button>
+                        </div>
+
+                        <div id="tab-content-world" class="tab-content space-y-4">
+                            <div>
+                                <label for="setting-step1Realms" class="input-label">1. Cảnh giới tu luyện</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step1Realms" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Liệt kê theo thứ tự: (Ví dụ: Luyện Khí → Trúc Cơ → Kim Đan → ...)"></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step1Realms" data-prompt-type="realms" title="✨ Gợi ý cảnh giới">✨</button>
+                                </div>
+                            </div>
+                            <div><label for="setting-step1EnergySource" class="input-label">2. Nguồn năng lượng chính</label><textarea id="setting-step1EnergySource" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Linh khí, Ma khí, Nguyên tố, Tín ngưỡng lực…"></textarea></div>
+                            <div><label for="setting-step1Breakthrough" class="input-label">3. Điều kiện đột phá</label><textarea id="setting-step1Breakthrough" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Lĩnh ngộ đạo lý, Vượt Thiên Kiếp, Kết đan thành công…"></textarea></div>
+                            <div><label for="setting-step2Talent" class="input-label">4. Thiên phú và thể chất</label><textarea id="setting-step2Talent" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Linh căn ngũ hành, Hỗn Độn Thể, Dị đồng, Âm Dương Thể..."></textarea></div>
+                            <div><label for="setting-step2Methods" class="input-label">5. Công pháp, kỹ năng, pháp bảo</label><textarea id="setting-step2Methods" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Liệt kê hệ thống kỹ năng: (tu luyện – chiến đấu – phụ trợ)"></textarea></div>
+                            <div><label for="setting-step2Challenges" class="input-label">6. Trở ngại tu luyện</label><textarea id="setting-step2Challenges" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Tâm ma, Thiên kiếp, Tẩu hỏa nhập ma, Quy tắc thiên đạo…"></textarea></div>
+                            <div><label for="setting-step2History" class="input-label">7. Lịch sử - Truyền thuyết nổi bật</label><textarea id="setting-step2History" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Các sự kiện quan trọng trong quá khứ, có ảnh hưởng lớn đến hiện tại."></textarea></div>
+                            <div><label for="setting-step2Geography" class="input-label">8. Địa lý – Vị diện – Không gian</label><textarea id="setting-step2Geography" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Miêu tả bố cục thế giới: (Ví dụ: Hạ giới – Trung giới – Thượng giới…)"></textarea></div>
+                            <div><label for="setting-step2WorldRules" class="input-label">9. Quy luật thế giới / Thiên đạo</label><textarea id="setting-step2WorldRules" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Nhân quả rõ ràng, Vạn vật hữu linh, Cấm kỵ nghịch thiên"></textarea></div>
+                            <div>
+                                <label for="setting-step2Factions" class="input-label">10. Thế lực và tổ chức</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step2Factions" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Ví dụ: Huyền Thiên Tông, Ma Thần Cung, Đạo Minh Liên Minh…"></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step2Factions" data-prompt-type="factions" title="✨ Gợi ý thế lực">✨</button>
+                                </div>
+                            </div>
+                            <div><label for="setting-step2Races" class="input-label">11. Chủng tộc và sinh vật</label><textarea id="setting-step2Races" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Nhân tộc, Yêu tộc, Linh thú, Ma vật, Dị tộc…"></textarea></div>
+                            <div><label for="setting-step2Economy" class="input-label">12. Kinh tế và tiền tệ</label><textarea id="setting-step2Economy" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Dùng linh thạch làm tiền, Có đấu giá hội, Có thương hội..."></textarea></div>
+                            <div><label for="setting-step2Professions" class="input-label">13. Nghề nghiệp phụ trợ</label><textarea id="setting-step2Professions" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Luyện đan, Luyện khí, Trận pháp, Khôi lỗi, Dịch trận..."></textarea></div>
+                            <div><label for="setting-step2Infrastructure" class="input-label">14. Hạ tầng xã hội</label><textarea id="setting-step2Infrastructure" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Truyền tống trận, Linh xa, Phi hạm, Thành trì nổi trên không..."></textarea></div>
+                        </div>
+
+                        <div id="tab-content-plot" class="tab-content space-y-4">
+                            <div><label for="setting-step3Structure" class="input-label">1. Cấu trúc cốt truyện</label><textarea id="setting-step3Structure" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Chia theo Arc lớn, Leo dần theo các bản đồ, Trùng sinh nghịch thiên…"></textarea></div>
+                            <div><label for="setting-step3Techniques" class="input-label">2. Kỹ thuật gây nghiện</label><textarea id="setting-step3Techniques" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Treo tình tiết, Tạo sảng điểm, Nhịp điệu chặt-chùng-căng…"></textarea></div>
+                            <div><label for="setting-styleTone" class="input-label">3. Phong cách và tông màu</label><textarea id="setting-styleTone" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Tăm tối và khốc liệt, Hài hước châm biếm, Huyền bí ma mị…"></textarea></div>
+                            <div>
+                                <label for="setting-pov" class="input-label">4. Góc nhìn kể chuyện</label>
+                                <select id="setting-pov" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent-blue">
+                                    <option value="third_person_limited">Ngôi thứ ba hạn tri (khuyên dùng)</option>
+                                    <option value="third_person_omniscient">Ngôi thứ ba toàn tri</option>
+                                    <option value="first_person">Ngôi thứ nhất</option>
+                                    <option value="rotating_pov">Góc nhìn luân phiên</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="setting-learnedStory" class="input-label">5. Văn phong tham chiếu (nếu có)</label>
+                                <textarea id="setting-learnedStory" rows="8" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Bạn có thể dán đoạn văn mẫu hoặc tên tác giả muốn bắt chước."></textarea>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <input type="file" id="learned-story-file-input" class="hidden" accept=".txt">
+                                    <button id="upload-learned-story-btn" class="flex-grow bg-accent-purple/20 text-accent-purple p-2 rounded-md hover:bg-accent-purple/30 flex items-center justify-center gap-2 transition-colors">
+                                        <i class="fa-solid fa-upload"></i> Tải lên
+                                    </button>
+                                    <button id="analyze-style-btn" class="flex-grow bg-accent-yellow/20 text-accent-yellow p-2 rounded-md hover:bg-accent-yellow/30 flex items-center justify-center gap-2 transition-colors">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> ✨ Phân tích
+                                    </button>
+                                </div>
+                                <div id="style-analysis-result" class="mt-2 text-xs text-text-secondary p-2 bg-primary rounded-md border border-tertiary hidden"></div>
+                            </div>
+                        </div>
+
+                        <div id="tab-content-advanced" class="tab-content space-y-4">
+                            <div>
+                                <label for="setting-step0Conflict" class="input-label">1. Xung đột nền tảng</label>
+                                <div class="relative w-full">
+                                    <textarea id="setting-step0Conflict" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm pr-9" placeholder="Mâu thuẫn sâu xa nhất của truyện: (Ví dụ: Số phận vs Tự do ý chí…)"></textarea>
+                                    <button class="brainstorm-btn" data-target="setting-step0Conflict" data-prompt-type="conflict" title="✨ Gợi ý xung đột">✨</button>
+                                </div>
+                            </div>
+                            <div><label for="setting-step0Price" class="input-label">2. Cái giá phải trả</label><textarea id="setting-step0Price" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Mất đi cảm xúc, Tu luyện khiến thân thể bị ăn mòn..."></textarea></div>
+                            <div><label for="setting-step4Mystery" class="input-label">3. Bí ẩn và yếu tố vĩ mô</label><textarea id="setting-step4Mystery" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Bí mật của thế giới, Ý chí thiên đạo có thật không…"></textarea></div>
+                            <div><label for="setting-step4Anomalies" class="input-label">4. Dị tượng – Quy tắc lạ</label><textarea id="setting-step4Anomalies" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Thời gian chảy ngược ở một vùng, Không gian lặp vô tận…"></textarea></div>
+                            <div><label for="setting-step4Remnants" class="input-label">5. Tàn tích – Đồ cổ xưa</label><textarea id="setting-step4Remnants" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Bí cảnh thời Thượng Cổ, Linh hồn cường giả ngủ say..."></textarea></div>
+                            <div><label for="setting-step5Details" class="input-label">6. Chi tiết đời thường để tạo chiều sâu</label><textarea id="setting-step5Details" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Ẩm thực tu chân, Lễ hội linh khí, Tín ngưỡng địa phương…"></textarea></div>
+                            <div><label for="setting-step5InternalConflicts" class="input-label">7. Tình huống "Nếu... thì sao?" để tạo kịch tính</label><textarea id="setting-step5InternalConflicts" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Nếu Ma đạo thống trị thì Tiên đạo có bị tận diệt?"></textarea></div>
+                            <div><label for="setting-step5Perspectives" class="input-label">8. Góc nhìn đa chiều – Lịch sử thay đổi tùy người kể</label><textarea id="setting-step5Perspectives" rows="2" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Gợi ý cách dùng nhiều nhân vật để kể lại cùng một sự kiện."></textarea></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="text-sm font-semibold uppercase text-text-secondary tracking-wider mb-3">Công Cụ Audio</h2>
+                     <div class="bg-primary border border-tertiary rounded-lg p-4 space-y-4">
+                        <select id="voice-select" class="w-full bg-secondary border border-tertiary rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-blue disabled:opacity-50"></select>
+                        <div>
+                            <label for="speed-control" class="text-sm font-medium text-text-secondary">Tốc độ: <span id="speed-label">1.0x</span></label>
+                            <input type="range" id="speed-control" min="0.5" max="2" value="1" step="0.1" class="w-full mt-1 accent-accent-pink disabled:opacity-50">
+                        </div>
+                        <div class="flex justify-center items-center space-x-4">
+                            <button id="prev-track-btn" class="p-3 w-12 h-12 flex items-center justify-center bg-tertiary rounded-full hover:bg-tertiary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95">
+                                <i class="fa-solid fa-backward-step text-lg"></i>
+                            </button>
+                            <button id="play-pause-btn" class="p-3 w-16 h-16 flex items-center justify-center bg-accent-pink text-white rounded-full hover:bg-accent-pink/80 disabled:opacity-50 disabled:cursor-not-allowed text-2xl transition-transform active:scale-95">
+                                <i id="play-icon" class="fa-solid fa-play"></i>
+                                <i id="pause-icon" class="fa-solid fa-pause hidden"></i>
+                            </button>
+                            <button id="next-track-btn" class="p-3 w-12 h-12 flex items-center justify-center bg-tertiary rounded-full hover:bg-tertiary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95">
+                                <i class="fa-solid fa-forward-step text-lg"></i>
+                            </button>
+                        </div>
+                        <p id="status-indicator" class="text-sm text-center text-text-secondary">Sẵn sàng</p>
+                     </div>
+                </section>
+
+                <section>
+                    <h2 class="text-sm font-semibold uppercase text-text-secondary tracking-wider mb-3">Quản Lý Dữ Liệu</h2>
+                    <div class="space-y-3">
+                        <div class="bg-primary border border-tertiary rounded-lg p-4 space-y-3">
+                            <h3 class="font-semibold text-white">Lưu trữ & Xóa</h3>
+                            <p class="text-sm text-text-secondary">Lưu trữ toàn bộ truyện về máy hoặc xóa dữ liệu không cần thiết.</p>
+                             <div class="grid grid-cols-2 gap-2 text-sm">
+                                <button id="export-json-btn" class="bg-accent-blue/20 text-accent-blue p-2 rounded-md hover:bg-accent-blue/30 flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-download"></i> Xuất File</button>
+                                <button id="import-json-btn" class="bg-tertiary hover:bg-tertiary/80 p-2 rounded-md flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-upload"></i> Nhập File</button>
+                                <button id="delete-chapter-btn" class="bg-danger/20 text-danger p-2 rounded-md hover:bg-danger/40 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-trash"></i> Xóa Chương</button>
+                                <button id="delete-all-btn" class="bg-danger/20 text-danger p-2 rounded-md hover:bg-danger/40 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-fire"></i> Xóa Hết</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+             <div class="p-4 pt-4 border-t border-tertiary text-xs text-text-secondary flex-shrink-0">
+                <p id="auth-status">Đang kết nối...</p>
+                <p id="user-id-display" class="truncate"></p>
+            </div>
+        </aside>
+
+        <main id="main-content" class="flex-grow p-4 sm:p-6 lg:p-8 h-screen flex flex-col">
+            <div class="mb-4 p-4 border border-tertiary rounded-lg bg-secondary">
+                <div id="auth-section">
+                    <div id="user-profile" class="hidden items-center gap-3 mb-2">
+                        <p id="user-info" class="text-text-main font-semibold"></p>
+                        <button id="logout-button" class="bg-danger/20 text-danger px-3 py-1 rounded text-sm">Đăng xuất</button>
+                    </div>
+                    <button id="login-button" class="bg-accent-blue text-white px-4 py-2 rounded">🔐 Đăng nhập với Google</button>
+                </div>
+
+                <div id="firestore-story-section" class="hidden mt-4 pt-4 border-t border-tertiary">
+                    <h3 class="font-bold text-lg mb-2 text-white">Lưu Trữ Cloud</h3>
+                    <p class="text-sm text-text-secondary mb-3">Đồng bộ hoặc quản lý các phiên bản truyện của bạn đã lưu trên Cloud.</p>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <button id="save-current-story-button" class="bg-accent-green/20 text-accent-green p-2 rounded-md hover:bg-accent-green/30 flex items-center justify-center gap-2 transition-colors disabled:opacity-50" disabled>
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Lưu Truyện Hiện Tại
+                        </button>
+                        <button id="manage-cloud-stories-button" class="bg-accent-blue/20 text-accent-blue p-2 rounded-md hover:bg-accent-blue/30 flex items-center justify-center gap-2 transition-colors">
+                            <i class="fa-solid fa-box-archive"></i> Quản Lý Truyện
+                        </button>
+                    </div>
+                    <p id="current-story-indicator" class="text-xs text-accent-purple mt-2"></p>
+                </div>
+            </div>
+
+            <div id="main-view-grid" class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-hidden">
+                <div class="bg-secondary rounded-xl p-4 sm:p-6 flex flex-col h-full overflow-hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-white">Danh sách chương</h2>
+                        <div class="flex items-center text-sm">
+                            <label for="auto-gen-toggle" class="mr-2 text-text-secondary">Tự động:</label>
+                            <button id="auto-gen-toggle" role="switch" aria-checked="false" class="relative inline-flex h-6 w-11 items-center rounded-full bg-tertiary transition-colors disabled:opacity-50">
+                                <span class="inline-block h-4 w-4 transform rounded-full bg-white transition translate-x-1"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="chapter-list" class="flex-grow overflow-y-auto space-y-2 pr-2">
+                        </div>
+                    <div id="continuous-gen-notification" class="hidden text-sm text-center text-accent-green bg-accent-green/10 p-2 mt-2 rounded-md">AI đang tự động tạo chương mới...</div>
+                </div>
+
+                <div class="bg-secondary rounded-xl p-1 flex flex-col h-full overflow-hidden">
+                    <div class="p-3 sm:p-5 border-b border-tertiary flex justify-between items-center flex-shrink-0">
+                        <h3 id="chapter-title-display" class="text-lg font-semibold text-accent-blue">Chọn một chương</h3>
+                        <div class="flex items-center gap-3">
+                            <button id="enter-reading-mode-btn" title="Chế độ Đọc" class="ai-tool-btn"><i class="fa-solid fa-book-open"></i></button>
+                            <div class="w-px h-5 bg-tertiary"></div>
+                            <div id="ai-tools-container" class="flex items-center gap-1">
+                                <button id="summarize-chapter-btn" title="✨ Tóm tắt chương" class="ai-tool-btn"><i class="fa-solid fa-align-left"></i></button>
+                                <button id="suggest-plot-btn" title="✨ Gợi ý tình tiết" class="ai-tool-btn"><i class="fa-solid fa-lightbulb"></i></button>
+                                <button id="generate-image-btn" title="✨ Tạo ảnh bìa" class="ai-tool-btn"><i class="fa-solid fa-image"></i></button>
+                            </div>
+                            <div class="w-px h-5 bg-tertiary"></div>
+                            <button id="save-chapter-btn" class="hidden bg-accent-blue text-white font-bold py-1 px-3 rounded-md hover:bg-accent-blue/80 text-sm transition-colors">Lưu</button>
+                            <button id="focus-mode-btn" title="Chế độ Tập trung" class="text-text-secondary hover:text-white p-1 rounded-md">
+                                <i id="focus-mode-icon" class="fa-solid fa-expand text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="story-content" contenteditable="true" class="flex-grow p-4 sm:p-6 text-base leading-relaxed focus:outline-none overflow-y-auto">
+                        <p class="text-text-secondary">Sử dụng cẩm nang xây dựng thế giới bên trái để tạo nên một câu chuyện độc nhất. Khi sẵn sàng, nhấn nút <span class="text-accent-pink font-bold">+</span> để AI viết chương đầu tiên!</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <button id="generate-chapter-btn" class="fab fixed bottom-6 right-6 z-20 w-16 h-16 bg-accent-pink rounded-full flex items-center justify-center text-white text-3xl hover:bg-accent-pink/90 disabled:opacity-50 disabled:cursor-not-allowed">
+            <i id="generate-chapter-icon" class="fa-solid fa-plus"></i>
+        </button>
+
+        <div id="toast-container" class="fixed bottom-4 right-4 z-50 w-full max-w-xs"></div>
+        <div id="loading-overlay" class="fixed inset-0 bg-primary/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+            <div class="loader"></div>
+        </div>
+
+        <div id="confirmation-modal" class="fixed inset-0 bg-primary/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+            <div class="bg-secondary p-6 rounded-lg shadow-xl border border-tertiary w-full max-w-sm">
+                <h3 id="modal-title" class="text-lg font-bold text-white text-center mb-4">Xác nhận</h3>
+                <p id="modal-message" class="text-text-main text-center mb-6"></p>
+                <div id="modal-buttons" class="flex justify-around gap-4">
+                    <button id="modal-cancel-btn" class="w-full bg-tertiary hover:bg-tertiary/80 py-2 px-4 rounded-md transition-colors">Hủy</button>
+                    <button id="modal-confirm-btn" class="w-full bg-danger text-white py-2 px-4 rounded-md hover:bg-danger/80 transition-colors">Xác nhận</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="image-gen-modal" class="fixed inset-0 bg-primary/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+            <div class="bg-secondary p-4 rounded-lg shadow-xl border border-tertiary w-full max-w-2xl text-center relative">
+                <button id="close-image-modal-btn" class="absolute top-3 right-3 text-text-secondary hover:text-white text-2xl leading-none">&times;</button>
+                <h3 class="text-xl font-bold mb-4 text-white">Ảnh Bìa do AI Tạo</h3>
+                <div id="image-gen-loader" class="flex flex-col items-center justify-center h-80">
+                    <div class="loader"></div>
+                    <p class="mt-4 text-text-secondary">AI đang vẽ, vui lòng chờ trong giây lát...</p>
+                </div>
+                <div id="image-gen-result" class="hidden">
+                    <img id="generated-image" src="" alt="Generated cover image" class="rounded-md mx-auto max-h-[70vh] object-contain">
+                    <p id="generated-image-prompt" class="text-xs text-text-secondary mt-2 p-2 bg-primary rounded-md max-h-24 overflow-y-auto text-left"></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="reading-mode-view" class="fixed inset-0 bg-primary p-4 sm:p-8 lg:p-12 z-50 hidden opacity-0 font-sans theme-dark">
+            <div id="reading-toolbar" class="fixed top-4 left-1/2 -translate-x-1/2 bg-secondary/80 backdrop-blur-sm p-2 rounded-full flex items-center gap-2 z-10">
+                <button id="reading-chapter-list-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg" title="Danh sách chương"><i class="fa-solid fa-list-ul"></i></button>
+                <div class="w-px h-5 bg-tertiary"></div>
+                <button id="reading-font-btn" data-font="sans" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg" title="Đổi Font Chữ"><i class="fa-solid fa-font"></i></button>
+                <div class="w-px h-5 bg-tertiary"></div>
+                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-primary border-2" data-theme="dark" title="Nền Tối"></button>
+                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-light" data-theme="light" title="Nền Sáng"></button>
+                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-sepia" data-theme="sepia" title="Nền Sepia"></button>
+                <div class="w-px h-5 bg-tertiary"></div>
+                <button id="export-story-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tải Truyện"><i class="fa-solid fa-download"></i></button>
+                <button id="feedback-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Góp Ý & Viết Lại"><i class="fa-solid fa-comment-dots"></i></button>
+                <button id="reading-mode-new-chapter-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tạo Chương Mới"><i class="fa-solid fa-plus"></i></button>
+                <div class="w-px h-5 bg-tertiary"></div>
+                <button id="exit-reading-mode-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Thoát"><i class="fa-solid fa-times"></i></button>
+            </div>
+            
+            <div id="reading-chapter-list-popup" class="hidden absolute top-20 left-1/2 -translate-x-1/2 bg-secondary border border-tertiary rounded-lg shadow-lg w-full max-w-xs max-h-80 overflow-y-auto p-2 z-10">
+                <!-- Chapter list will be populated here -->
+            </div>
+
+            <div class="max-w-3xl mx-auto h-full flex flex-col pt-20">
+                <div id="reading-mode-content" class="text-lg leading-relaxed overflow-y-auto flex-grow">
+                </div>
+            </div>
+        </div>
+
+        <div id="export-modal" class="fixed inset-0 bg-primary/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+            <div class="bg-secondary p-6 rounded-lg shadow-xl border border-tertiary w-full max-w-xs">
+                <h3 class="text-lg font-bold text-white text-center mb-6">Tải Truyện Dưới Dạng</h3>
+                <div class="flex flex-col gap-3">
+                    <button id="export-pdf-btn" class="w-full bg-accent-blue/20 text-accent-blue p-2 rounded-md hover:bg-accent-blue/30 flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                    <button id="export-txt-btn" class="w-full bg-accent-green/20 text-accent-green p-2 rounded-md hover:bg-accent-green/30 flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-file-lines"></i> TXT</button>
+                    <button id="export-html-btn" class="w-full bg-accent-purple/20 text-accent-purple p-2 rounded-md hover:bg-accent-purple/30 flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-file-code"></i> HTML</button>
+                    <button id="export-modal-cancel-btn" class="w-full bg-tertiary hover:bg-tertiary/80 py-2 px-4 rounded-md transition-colors mt-4">Hủy</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="feedback-modal" class="fixed inset-0 bg-primary/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+            <div class="bg-secondary p-6 rounded-lg shadow-xl border border-tertiary w-full max-w-lg">
+                <h3 class="text-lg font-bold text-white mb-4">Góp Ý & Viết Lại Chương</h3>
+                <p class="text-sm text-text-secondary mb-4">Nhập những thay đổi bạn muốn AI thực hiện cho chương này. AI sẽ viết lại toàn bộ chương dựa trên góp ý của bạn.</p>
+                <textarea id="feedback-textarea" rows="6" class="w-full p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Ví dụ: Hãy thêm một đoạn đối thoại căng thẳng giữa nhân vật chính và phản diện. Hoặc: Hãy miêu tả cảnh chiến đấu chi tiết và hoành tráng hơn."></textarea>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button id="feedback-modal-cancel-btn" class="bg-tertiary hover:bg-tertiary/80 py-2 px-4 rounded-md transition-colors">Hủy</button>
+                    <button id="feedback-modal-submit-btn" class="bg-accent-pink text-white py-2 px-4 rounded-md hover:bg-accent-pink/80 transition-colors">Gửi Góp Ý & Viết Lại</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="character-chat-modal" class="fixed inset-0 bg-primary/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+             <div class="bg-secondary p-4 rounded-lg shadow-xl border border-tertiary w-full max-w-lg h-[80vh] flex flex-col">
+                <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                    <h3 class="text-lg font-bold text-white">✨ Trò chuyện với Nhân Vật</h3>
+                    <button id="close-character-chat-btn" class="text-text-secondary hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+                <div id="character-chat-log" class="flex-grow overflow-y-auto p-2 space-y-4">
+                    <!-- Chat messages will appear here -->
+                </div>
+                <div class="mt-4 flex gap-2 flex-shrink-0">
+                    <input type="text" id="character-chat-input" class="flex-grow p-2 bg-primary border border-tertiary rounded-md text-sm" placeholder="Hỏi nhân vật của bạn...">
+                    <button id="character-chat-send-btn" class="bg-accent-blue text-white px-4 rounded-md hover:bg-accent-blue/80 transition-colors"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+             </div>
+        </div>
+        
+    </div>
+
+    <div id="story-selection-modal" class="fixed inset-0 bg-primary/90 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-secondary p-6 rounded-lg shadow-xl border border-tertiary w-full max-w-2xl flex flex-col h-[80vh]">
+            <h3 class="text-xl font-bold text-white text-center mb-4 flex-shrink-0">Quản Lý Truyện Trên Cloud</h3>
+            <div id="cloud-story-list" class="flex-grow overflow-y-auto space-y-3 p-2 bg-primary rounded-md border border-tertiary">
+                <div id="story-list-loader" class="text-center text-text-secondary p-8">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl"></i>
+                    <p class="mt-2">Đang tải danh sách truyện...</p>
+                </div>
+            </div>
+            <div class="mt-4 flex-shrink-0 grid grid-cols-1 md:grid-cols-2 gap-3 text-center">
+                <div class="bg-primary p-4 rounded-md border border-tertiary">
+                    <h4 class="font-semibold mb-2">Tạo Mới / Lưu Đè</h4>
+                    <p class="text-xs text-text-secondary mb-3">Lưu phiên bản truyện hiện tại trên máy lên Cloud với một tên mới hoặc ghi đè lên truyện đã có.</p>
+                    <div class="flex gap-2">
+                            <input type="text" id="new-story-title-input" class="flex-grow p-2 bg-secondary border border-tertiary rounded-md text-sm" placeholder="Nhập tên truyện để lưu...">
+                            <button id="save-new-story-button" class="bg-accent-green text-white font-semibold px-4 rounded-md hover:bg-accent-green/80 transition-colors">Lưu</button>
+                    </div>
+                </div>
+                    <div class="bg-primary p-4 rounded-md border border-tertiary">
+                    <h4 class="font-semibold mb-2">Tải Truyện Từ File</h4>
+                        <p class="text-xs text-text-secondary mb-3">Tải lên một file truyện `.json` bạn đã lưu trước đó. Truyện sẽ được nạp vào trình soạn thảo.</p>
+                    <button id="import-story-from-file-btn" class="w-full bg-accent-purple text-white font-semibold p-2 rounded-md hover:bg-accent-purple/80 transition-colors">
+                        <i class="fa-solid fa-upload"></i> Chọn File .json Để Nhập
+                    </button>
+                </div>
+            </div>
+            <button id="close-story-selection-btn" class="mt-4 bg-tertiary w-full py-2 rounded-md hover:bg-tertiary/80 transition-colors flex-shrink-0">Đóng</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, addDoc, getDocs, writeBatch, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let app, db, auth, userId = null, authReady = false;
+
+        const TAG_DEFINITIONS = {
+            genre: ['Tiên Hiệp', 'Huyền Huyễn', 'Kiếm Hiệp', 'Đô Thị', 'Khoa Huyễn', 'Mạt Thế', 'Lịch Sử', 'Quân Sự', 'Dị Năng', 'Võng Du', 'Đồng Nhân', 'Trọng Sinh', 'Ngôn Tình'],
+            world: ['Đông Phương', 'Tây Phương', 'Hiện Đại', 'Tương Lai', 'Dị Giới', 'Mạt Thế', 'Vườn Trường', 'Quân Lữ', 'Hắc Bang'],
+            trope: ['Hệ Thống', 'Vô Địch Lưu', 'Cẩu Đạo', 'Sảng Văn', 'Hắc Ám', 'Nữ Cường', 'Gia Đấu', 'Cung Đấu', 'Xuyên Nhanh', 'Lão Gia']
+        };
+        
+        const appState = {
+            activeStoryId: null,
+            activeStoryTitle: null,
+            settings: {
+                // Genre
+                selectedGenres: "", selectedWorlds: "", selectedTropes: "",
+                // Step 0
+                step0CoreIdea: "", step0Theme: "", step0Conflict: "", step0Price: "",
+                // Step 1
+                step1McOrigin: "", step1McPersonality: "", step1McHobbies: "", step1McGoal: "", step1McAdvantage: "", step1McAdvantageFlaw: "",
+                step1Realms: "", step1EnergySource: "", step1Breakthrough: "",
+                // Step 2
+                step2Talent: "", step2Methods: "", step2Challenges: "",
+                step2History: "", step2Geography: "", step2WorldRules: "",
+                step2Factions: "", step2Races: "", step2Economy: "",
+                step2Professions: "", step2Infrastructure: "",
+                // Step 3
+                step3Structure: "", step3Techniques: "",
+                // Step 4
+                step4Mystery: "", step4Anomalies: "", step4Remnants: "",
+                // Step 5
+                step5Details: "", step5InternalConflicts: "", step5Perspectives: "",
+                // Other settings
+                pov: "third_person_limited", 
+                styleTone: "",
+                learnedStory: ""
+            },
+            chapters: [], selectedChapterId: null, currentChapterIndex: -1,
+            isGenerating: false, isSaving: false, autoGenerate: false,
+            tts: {
+                synth: window.speechSynthesis, voices: [], vietnameseVoice: null, isSpeechInitialized: false,
+                isPlaying: false, currentUtterance: null, currentParagraphIndex: 0,
+                highlightedElement: null, utteranceQueue: [], playerStatus: 'stopped'
+            },
+            readingMode: {
+                font: 'sans', // 'sans' or 'serif'
+                theme: 'dark', // 'dark', 'light', 'sepia'
+                lastReadChapterId: null,
+                lastReadScrollTop: 0,
+                currentVisibleChapterId: null
+            },
+            characterChat: {
+                history: [],
+                isLoading: false
+            }
+        };
+
+        let DOMElements;
+        let scrollSaveTimeout;
+        
+        function showToast(message, type = 'info') {
+            if (!DOMElements?.toastContainer) return;
+            const toast = document.createElement('div');
+            const icons = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle' };
+            const colors = { success: 'bg-accent-green', error: 'bg-danger', info: 'bg-accent-blue' };
+            toast.className = `transform translate-y-full opacity-0 transition-all duration-300 p-3 rounded-lg shadow-lg mb-2 text-sm text-white flex items-center gap-3 ${colors[type]}`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type]}"></i><span>${message}</span>`;
+            DOMElements.toastContainer.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-full', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3000);
+        }
+
+        function toggleLoading(show, showOverlay = true) {
+            appState.isGenerating = show;
+            DOMElements.loadingOverlay?.classList.toggle('hidden', !show || !showOverlay);
+            updateUIStates();
+        }
+        
+        function updateUIStates() {
+            const genBtn = DOMElements.generateChapterBtn;
+            const genIcon = DOMElements.generateChapterIcon;
+            if (genBtn) {
+                genBtn.disabled = appState.isGenerating || !authReady;
+                if(appState.isGenerating) {
+                    genIcon.className = "fa-solid fa-spinner fa-spin";
+                } else {
+                    genIcon.className = "fa-solid fa-plus";
+                }
+            }
+            if (DOMElements.autoGenToggle) DOMElements.autoGenToggle.disabled = appState.isGenerating || !authReady;
+            if (DOMElements.savingIndicator) DOMElements.savingIndicator.classList.toggle('opacity-0', !appState.isSaving);
+            
+            const isChapterSelected = !!appState.selectedChapterId;
+            DOMElements.summarizeChapterBtn.disabled = appState.isGenerating || !isChapterSelected;
+            DOMElements.suggestPlotBtn.disabled = appState.isGenerating || !isChapterSelected;
+            DOMElements.generateImageBtn.disabled = appState.isGenerating;
+            DOMElements.enterReadingModeBtn.disabled = appState.chapters.length === 0;
+
+            document.querySelectorAll('.suggestion-dropdown button, #suggestion-engine-btn').forEach(btn => {
+                 btn.disabled = appState.isGenerating;
+            });
+        }
+
+        function showConfirmationModal(message, title = "Xác nhận") {
+            return new Promise(resolve => {
+                if (!DOMElements.confirmationModal) { resolve(false); return; }
+                DOMElements.modalTitle.textContent = title;
+                DOMElements.modalMessage.innerHTML = message.replace(/\n/g, '<br>');
+                DOMElements.modalConfirmBtn.style.display = 'block';
+                DOMElements.modalCancelBtn.textContent = 'Hủy';
+                DOMElements.modalConfirmBtn.textContent = 'Xác nhận';
+                DOMElements.modalConfirmBtn.className = "w-full bg-danger text-white py-2 px-4 rounded-md hover:bg-danger/80 transition-colors";
+                DOMElements.confirmationModal.classList.remove('hidden');
+                
+                const confirmHandler = () => cleanup(true);
+                const cancelHandler = () => cleanup(false);
+                const cleanup = (result) => {
+                    DOMElements.confirmationModal.classList.add('hidden');
+                    DOMElements.modalConfirmBtn.removeEventListener('click', confirmHandler);
+                    DOMElements.modalCancelBtn.removeEventListener('click', cancelHandler);
+                    resolve(result);
+                };
+
+                DOMElements.modalConfirmBtn.addEventListener('click', confirmHandler, { once: true });
+                DOMElements.modalCancelBtn.addEventListener('click', cancelHandler, { once: true });
+            });
+        }
+
+        function showInfoModal(message, title = "Thông báo") {
+            DOMElements.modalTitle.textContent = title;
+            DOMElements.modalMessage.innerHTML = message.replace(/\n/g, '<br>');
+            DOMElements.modalConfirmBtn.style.display = 'none';
+            DOMElements.modalCancelBtn.textContent = 'Đóng';
+            DOMElements.confirmationModal.classList.remove('hidden');
+            const cancelHandler = () => DOMElements.confirmationModal.classList.add('hidden');
+            DOMElements.modalCancelBtn.addEventListener('click', cancelHandler, { once: true });
+        }
+        
+        function updateAutoGenUI() {
+            if (!DOMElements?.autoGenToggle) return;
+            DOMElements.autoGenToggle.setAttribute('aria-checked', appState.autoGenerate);
+            const span = DOMElements.autoGenToggle.querySelector('span');
+            if (span) {
+                span.style.transform = appState.autoGenerate ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
+            }
+            DOMElements.autoGenToggle.classList.toggle('bg-accent-pink', appState.autoGenerate);
+            DOMElements.autoGenToggle.classList.toggle('bg-tertiary', !appState.autoGenerate);
+            DOMElements.continuousGenNotification.classList.toggle('hidden', !appState.autoGenerate);
+        }
+
+        function toggleFocusMode() {
+            const container = DOMElements.appContainer;
+            const icon = DOMElements.focusModeIcon;
+            if (!container || !icon) return;
+            container.classList.toggle('focus-mode');
+            
+            const isInFocusMode = container.classList.contains('focus-mode');
+            icon.classList.toggle('fa-expand', !isInFocusMode);
+            icon.classList.toggle('fa-compress', isInFocusMode);
+        }
+        
+        function selectChapter(chapterId) {
+            appState.selectedChapterId = chapterId;
+            const selectedChapter = appState.chapters.find(c => c.id === chapterId);
+
+            if (selectedChapter) {
+                appState.currentChapterIndex = appState.chapters.indexOf(selectedChapter);
+                DOMElements.chapterTitleDisplay.textContent = selectedChapter.title;
+                DOMElements.storyContent.innerHTML = selectedChapter.content;
+                DOMElements.saveChapterBtn.classList.add('hidden');
+                stopReading();
+                appState.tts.currentParagraphIndex = 0;
+            } else {
+                appState.selectedChapterId = null;
+                appState.currentChapterIndex = -1;
+                DOMElements.chapterTitleDisplay.textContent = 'Chọn một chương';
+                DOMElements.storyContent.innerHTML = `<p class="text-text-secondary">Sử dụng cẩm nang xây dựng thế giới bên trái để tạo nên một câu chuyện độc nhất. Khi sẵn sàng, nhấn nút <span class="text-accent-pink font-bold">+</span> để AI viết chương đầu tiên!</p>`;
+                DOMElements.saveChapterBtn.classList.add('hidden');
+                stopReading();
+            }
+            document.querySelectorAll('.chapter-item').forEach(item => {
+                item.classList.toggle('selected', item.dataset.chapterId === chapterId);
+            });
+            DOMElements.deleteChapterBtn.disabled = !appState.selectedChapterId;
+            updatePlayerUI(appState.tts.playerStatus);
+            updateUIStates();
+        }
+
+        function enterReadingMode(targetChapterId = null) {
+            if (appState.chapters.length === 0) {
+                showToast("Chưa có chương nào để đọc.", "info");
+                return;
+            }
+
+            const contentContainer = DOMElements.readingModeContent;
+            const chapterListPopup = DOMElements.readingChapterListPopup;
+            contentContainer.innerHTML = '';
+            chapterListPopup.innerHTML = '';
+
+            appState.chapters.forEach(chapter => {
+                const chapterWrapper = document.createElement('div');
+                chapterWrapper.id = `reading-chapter-${chapter.id}`;
+                chapterWrapper.className = 'py-8 border-b border-tertiary/20';
+                
+                const title = document.createElement('h2');
+                title.className = 'text-3xl font-bold text-accent-blue mb-6 text-center';
+                title.textContent = chapter.title;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.innerHTML = chapter.content;
+
+                chapterWrapper.appendChild(title);
+                chapterWrapper.appendChild(contentDiv);
+                contentContainer.appendChild(chapterWrapper);
+
+                const listItem = document.createElement('a');
+                listItem.href = `#reading-chapter-${chapter.id}`;
+                listItem.className = 'block p-2 rounded-md hover:bg-tertiary transition-colors';
+                listItem.textContent = chapter.title;
+                listItem.onclick = (e) => {
+                    e.preventDefault();
+                    document.getElementById(`reading-chapter-${chapter.id}`).scrollIntoView({ behavior: 'smooth' });
+                    chapterListPopup.classList.add('hidden');
+                };
+                chapterListPopup.appendChild(listItem);
+            });
+            
+            DOMElements.readingModeView.classList.remove('hidden');
+            setTimeout(() => DOMElements.readingModeView.classList.remove('opacity-0'), 10);
+
+            setTimeout(() => {
+                const chapterToScrollTo = targetChapterId || appState.readingMode.lastReadChapterId || appState.chapters[0].id;
+                const element = document.getElementById(`reading-chapter-${chapterToScrollTo}`);
+                if (element) {
+                    const topPos = element.offsetTop - contentContainer.offsetTop;
+                    contentContainer.scrollTop = topPos;
+                    if (!targetChapterId && chapterToScrollTo === appState.readingMode.lastReadChapterId) {
+                        contentContainer.scrollTop += appState.readingMode.lastReadScrollTop;
+                    }
+                }
+            }, 100);
+        }
+
+        function exitReadingMode() {
+            DOMElements.readingModeView.classList.add('opacity-0');
+            setTimeout(() => DOMElements.readingModeView.classList.add('hidden'), 300);
+        }
+
+        function applyReadingModeSettings() {
+            const view = DOMElements.readingModeView;
+            view.classList.remove('font-sans', 'font-serif', 'theme-dark', 'theme-light', 'theme-sepia');
+            view.classList.add(`font-${appState.readingMode.font}`);
+            view.classList.add(`theme-${appState.readingMode.theme}`);
+
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('border-accent-blue');
+                if (btn.dataset.theme === appState.readingMode.theme) {
+                    btn.classList.add('border-accent-blue');
+                }
+            });
+            saveSettings();
+        }
+
+
+        // --- TTS Functions ---
+        function initializeSpeech() {
+            const loadVoices = () => {
+                appState.tts.voices = appState.tts.synth.getVoices();
+                appState.tts.isSpeechInitialized = true;
+                populateVoiceList();
+                appState.tts.vietnameseVoice = appState.tts.voices.find(v => v.lang.startsWith('vi')) || appState.tts.voices[0];
+            };
+            appState.tts.synth.getVoices().length ? loadVoices() : (appState.tts.synth.onvoiceschanged = loadVoices);
+        }
+
+        function stopReading() {
+            appState.tts.isPlaying = false;
+            appState.tts.synth.cancel();
+            if (appState.tts.highlightedElement) {
+                appState.tts.highlightedElement.classList.remove('speaking-highlight');
+                appState.tts.highlightedElement = null;
+            }
+            updatePlayerUI('stopped');
+        }
+
+        function playCurrentChapter() {
+            if (!appState.selectedChapterId) { showToast("Vui lòng chọn một chương để nghe.", 'info'); return; }
+            _prepareAndStartSpeakingChapter(appState.tts.currentParagraphIndex);
+        }
+
+        function _prepareAndStartSpeakingChapter(startParagraphIndex = 0) {
+            appState.tts.synth.cancel();
+            if (!appState.tts.isSpeechInitialized || !appState.tts.vietnameseVoice) {
+                showToast('Hệ thống âm thanh chưa sẵn sàng.', 'error'); return;
+            }
+            const contentElement = DOMElements.storyContent;
+            const paragraphs = Array.from(contentElement.children).filter(el => el.textContent.trim());
+            if (paragraphs.length === 0) { showToast("Không có nội dung để đọc.", 'info'); return; }
+
+            appState.tts.utteranceQueue = paragraphs;
+            appState.tts.isPlaying = true;
+            appState.tts.currentParagraphIndex = startParagraphIndex;
+            updatePlayerUI('playing');
+            _speakNextInQueue();
+        }
+
+        function _speakNextInQueue() {
+            if (!appState.tts.isPlaying || appState.tts.currentParagraphIndex >= appState.tts.utteranceQueue.length) {
+                handleAudioChapterEnd(); return;
+            }
+            const paragraph = appState.tts.utteranceQueue[appState.tts.currentParagraphIndex];
+            const utterance = new SpeechSynthesisUtterance(paragraph.textContent);
+            utterance.voice = appState.tts.vietnameseVoice;
+            utterance.rate = parseFloat(DOMElements.speedControl.value);
+            utterance.pitch = 1.1;
+            utterance.onstart = () => {
+                if (appState.tts.highlightedElement) appState.tts.highlightedElement.classList.remove('speaking-highlight');
+                appState.tts.highlightedElement = paragraph;
+                paragraph.classList.add('speaking-highlight');
+                paragraph.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            };
+            utterance.onend = () => {
+                appState.tts.currentParagraphIndex++;
+                _speakNextInQueue();
+            };
+            utterance.onerror = (e) => {
+                if (e.error !== 'interrupted') {
+                    showToast(`Lỗi phát âm thanh: ${e.error}`, 'error');
+                    stopReading();
+                }
+            };
+            appState.tts.currentUtterance = utterance;
+            appState.tts.synth.speak(utterance);
+        }
+
+        function handleAudioChapterEnd() {
+            stopReading();
+            const nextIdx = appState.currentChapterIndex + 1;
+            if (nextIdx < appState.chapters.length) {
+                selectChapter(appState.chapters[nextIdx].id);
+                setTimeout(() => playCurrentChapter(), 500);
+            } else {
+                showToast("Đã đọc xong toàn bộ truyện.", 'success');
+            }
+        }
+
+        function updatePlayerUI(status) {
+            appState.tts.playerStatus = status;
+            const hasContent = !!appState.selectedChapterId;
+            DOMElements.playIcon.classList.toggle('hidden', status === 'playing');
+            DOMElements.pauseIcon.classList.toggle('hidden', status !== 'playing');
+            DOMElements.statusIndicator.textContent = status === 'playing' ? "Đang đọc..." : status === 'paused' ? "Tạm dừng" : "Sẵn sàng";
+            DOMElements.playPauseBtn.disabled = !hasContent;
+            DOMElements.prevTrackBtn.disabled = !hasContent || appState.currentChapterIndex <= 0;
+            DOMElements.nextTrackBtn.disabled = !hasContent || appState.currentChapterIndex >= appState.chapters.length - 1;
+        }
+
+        function populateVoiceList() {
+            DOMElements.voiceSelect.innerHTML = '';
+            appState.tts.voices.forEach(voice => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.value = voice.name;
+                if (voice.lang.startsWith('vi')) option.selected = true;
+                DOMElements.voiceSelect.appendChild(option);
+            });
+            DOMElements.voiceSelect.disabled = appState.tts.voices.length === 0;
+            DOMElements.speedControl.disabled = appState.tts.voices.length === 0;
+        }
+        // --- End TTS Functions ---
+
+        // --- Firebase Functions ---
+        async function initializeFirebase() {
+            try {
+                const firebaseConfig = {
+                  apiKey: "AIzaSyAkRewxkAxeJOCMEfe-wpJnEzQg1iloBAk",
+                  authDomain: "xuongtruyen-ai.firebaseapp.com",
+                  projectId: "xuongtruyen-ai",
+                  storageBucket: "xuongtruyen-ai.firebasestorage.app",
+                  messagingSenderId: "66951496463",
+                  appId: "1:66951496463:web:07b77ba73a0bda0684b47a",
+                  measurementId: "G-K2C5YWJ0DT"
+                };
+                if (!firebaseConfig.apiKey.startsWith("AIza")) { // Simple check for placeholder
+                    showToast("Cấu hình Firebase không hợp lệ!", 'error');
+                    throw new Error("Cấu hình Firebase trống.");
+                }
+
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // Theo dõi trạng thái xác thực
+                onAuthStateChanged(auth, async (user) => {
+                    const loginButton = document.getElementById('login-button');
+                    const userProfile = document.getElementById('user-profile');
+                    const userInfo = document.getElementById('user-info');
+                    const firestoreSection = document.getElementById('firestore-story-section');
+
+                    if (user && !user.isAnonymous) {
+                        userId = user.uid;
+                        DOMElements.authStatus.textContent = `Đã đăng nhập: ${user.displayName || user.email}`;
+                        userInfo.textContent = `Xin chào, ${user.displayName || 'bạn'}`;
+
+                        loginButton.classList.add('hidden');
+                        userProfile.classList.remove('hidden');
+                        firestoreSection.classList.remove('hidden');
+
+                        // HIỂN THỊ CỬA SỔ CHỌN TRUYỆN
+                        showStorySelectionModal();
+
+                    } else {
+                        // Chuyển sang chế độ Local nếu không đăng nhập
+                        userId = localStorage.getItem('localUserId') || `local_${Date.now()}`;
+                        localStorage.setItem('localUserId', userId);
+                        DOMElements.authStatus.textContent = 'Chế độ Khách (dữ liệu lưu trên máy)';
+                        loginButton.classList.remove('hidden');
+                        userProfile.classList.add('hidden');
+                        firestoreSection.classList.add('hidden');
+                        // Tải dữ liệu local
+                        await loadInitialData(true);
+                    }
+                    authReady = true;
+                });
+            } catch (e) {
+                DOMElements.authStatus.textContent = "Lỗi khởi tạo Firebase";
+                showToast(e.message, 'error');
+            }
+        }
+
+        // Hàm đăng nhập Google
+        async function loginWithGoogle() {
+            const provider = new GoogleAuthProvider();
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                showToast(`Đăng nhập thành công, ${user.displayName}!`, 'success');
+            } catch (error) {
+                console.error("Lỗi đăng nhập Google: ", error);
+                showToast(`Lỗi: ${error.message}`, 'error');
+            }
+        }
+
+        // Hàm đăng xuất
+        async function logoutUser() {
+            try {
+                await signOut(auth);
+                showToast('Đã đăng xuất.', 'info');
+                // onAuthStateChanged sẽ tự động xử lý việc chuyển về trạng thái ẩn danh
+            } catch(error) {
+                console.error("Lỗi đăng xuất: ", error);
+                showToast(`Lỗi: ${error.message}`, 'error');
+            }
+        }
+        
+        // Hàm lưu truyện lên Firestore
+        async function saveStoryToFirestore() {
+            const user = auth.currentUser;
+            if (!user || user.isAnonymous) {
+                alert("Bạn cần đăng nhập bằng Google để lưu truyện!");
+                return;
+            }
+
+            const title = document.getElementById('firestore-title').value.trim();
+            const content = document.getElementById('firestore-content').value.trim();
+            if (!title || !content) {
+                alert("Vui lòng nhập tiêu đề và nội dung.");
+                return;
+            }
+            
+            try {
+                // Tạo một document mới với ID ngẫu nhiên trong collection 'stories'
+                const storyCollection = collection(db, "stories");
+                await addDoc(storyCollection, {
+                    uid: user.uid,
+                    author: user.displayName,
+                    title: title,
+                    content: content,
+                    savedAt: new Date()
+                });
+                showToast(`Đã lưu truyện "${title}"!`, 'success');
+                document.getElementById('firestore-title').value = '';
+                document.getElementById('firestore-content').value = '';
+            } catch(error) {
+                console.error("Lỗi lưu truyện: ", error);
+                showToast(`Lỗi lưu truyện: ${error.message}`, 'error');
+            }
+        }
+
+        function getUserCollectionPath(collectionName) {
+            // Sử dụng userId đã được cập nhật bởi onAuthStateChanged
+            if (!userId) {
+                console.error("User ID chưa sẵn sàng.");
+                return null;
+            }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            return `artifacts/${appId}/users/${userId}/${collectionName}`;
+        }
+        // --- End Firebase Functions ---
+
+        // --- CRUD Functions (Local Storage) ---
+        function saveChaptersToLocal() {
+            try {
+                if(userId) localStorage.setItem(`chapters_${userId}`, JSON.stringify(appState.chapters));
+            } catch (e) {
+                console.error("Lỗi lưu chương cục bộ:", e);
+                showToast("Không thể lưu chương vào bộ nhớ trình duyệt.", 'error');
+            }
+        }
+
+        function addChapter(title, content) {
+            const newChapter = { 
+                id: `chapter_${Date.now()}`, 
+                title, 
+                content, 
+                createdAt: Date.now() 
+            };
+            appState.chapters.push(newChapter);
+            saveChaptersToLocal();
+            showToast(`Đã tạo "${title}"!`, 'success');
+            return newChapter.id;
+        }
+
+        function updateChapter(id, content) {
+            const chapter = appState.chapters.find(c => c.id === id);
+            if (chapter) {
+                chapter.content = content;
+                saveChaptersToLocal();
+                showToast("Đã lưu thay đổi.", 'success');
+                DOMElements.saveChapterBtn.classList.add('hidden');
+            }
+        }
+
+        async function deleteChapter(id) {
+            if (!await showConfirmationModal("Bạn có chắc chắn muốn xóa chương này?")) return;
+            const chapterIndex = appState.chapters.findIndex(c => c.id === id);
+            if (chapterIndex === -1) return;
+
+            appState.chapters.splice(chapterIndex, 1);
+            saveChaptersToLocal();
+            showToast("Đã xóa chương.", 'success');
+            
+            let newSelectedId = null;
+            if (appState.chapters.length > 0) {
+                 // Chọn chương liền trước hoặc chương đầu tiên nếu chương bị xóa là chương đầu
+                const newIndex = Math.max(0, chapterIndex - 1);
+                newSelectedId = appState.chapters[newIndex].id;
+            }
+            
+            renderChapterList();
+            selectChapter(newSelectedId);
+        }
+
+        async function deleteAllChapters() {
+            if (!await showConfirmationModal("Xóa TẤT CẢ các chương? Hành động này không thể hoàn tác.")) return;
+            appState.chapters = [];
+            saveChaptersToLocal();
+            showToast("Đã xóa tất cả chương.", 'success');
+            renderChapterList();
+            selectChapter(null);
+        }
+        // --- End CRUD Functions ---
+
+        // --- UI Rendering ---
+        function capitalize(s) {
+            if (typeof s !== 'string' || s.length === 0) return '';
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        function renderTags() {
+            for (const category in TAG_DEFINITIONS) {
+                const container = DOMElements[`tags${capitalize(category)}`];
+                if(container) {
+                    container.innerHTML = '';
+                    TAG_DEFINITIONS[category].forEach(tag => {
+                        const button = document.createElement('button');
+                        button.className = 'tag-btn text-xs font-medium py-1 px-3 rounded-full';
+                        button.textContent = tag;
+                        button.dataset.category = category;
+                        button.dataset.tag = tag;
+                        container.appendChild(button);
+                    });
+                }
+            }
+        }
+
+        function renderSettingsToUI() {
+            for (const key in appState.settings) {
+                if (key.startsWith('selected')) continue;
+                const el = document.getElementById(`setting-${key}`);
+                if (el) el.value = appState.settings[key] || '';
+            }
+            for (const category in TAG_DEFINITIONS) {
+                const stateKey = `selected${capitalize(category)}s`;
+                const selectedTags = appState.settings[stateKey] ? appState.settings[stateKey].split(', ').filter(t => t) : [];
+                if(DOMElements[`display${capitalize(category)}`]) {
+                    DOMElements[`display${capitalize(category)}`].value = selectedTags.join(', ');
+                }
+                document.querySelectorAll(`#tags-${category} .tag-btn`).forEach(btn => {
+                    btn.classList.toggle('active', selectedTags.includes(btn.dataset.tag));
+                });
+            }
+        }
+
+        function renderChapterList() {
+            DOMElements.chapterList.innerHTML = '';
+            if (appState.chapters.length === 0 && !appState.isGenerating) {
+                DOMElements.chapterList.innerHTML = '<p class="text-text-secondary text-center p-4">Chưa có chương nào.</p>';
+            } else {
+                appState.chapters.forEach((chapter, index) => {
+                    const item = document.createElement('div');
+                    item.className = `chapter-item p-3 rounded-lg cursor-pointer hover:bg-tertiary flex justify-between items-start`;
+                    item.dataset.chapterId = chapter.id;
+                    const snippet = chapter.content.replace(/<[^>]*>/g, ' ').trim();
+                    item.innerHTML = `
+                        <div>
+                            <h4 class="font-bold text-white">${chapter.title}</h4>
+                            <p class="text-text-secondary text-sm line-clamp-1">${snippet.substring(0, 50)}...</p>
+                        </div>
+                        <span class="text-xs font-mono text-text-secondary/50">#${index + 1}</span>
+                    `;
+                    DOMElements.chapterList.appendChild(item);
+                });
+            }
+            DOMElements.deleteAllBtn.disabled = appState.chapters.length === 0;
+            DOMElements.deleteChapterBtn.disabled = !appState.selectedChapterId;
+        }
+        // --- End UI Rendering ---
+
+        // --- Data Persistence ---
+        async function saveSettings() {
+            if (!authReady || !userId) return;
+            appState.isSaving = true;
+            updateUIStates();
+            try {
+                const settingsRef = doc(db, getUserCollectionPath('settings'), 'user_settings');
+                await setDoc(settingsRef, appState.settings);
+            } catch (e) {
+                console.error("Lỗi lưu cài đặt:", e);
+                showToast("Không thể lưu cài đặt.", 'error');
+            } finally {
+                appState.isSaving = false;
+                updateUIStates();
+            }
+        }
+
+        async function loadInitialData() {
+            if (!authReady || !userId) return;
+            toggleLoading(true, true);
+            try {
+                // Tải cài đặt
+                const settingsRef = doc(db, getUserCollectionPath('settings'), 'user_settings');
+                const settingsSnap = await getDoc(settingsRef);
+                if (settingsSnap.exists()) {
+                    Object.assign(appState.settings, settingsSnap.data());
+                }
+                renderSettingsToUI();
+                applyReadingModeSettings();
+
+                // Tải các chương
+                const chaptersRef = collection(db, getUserCollectionPath('chapters'));
+                const q = query(chaptersRef, orderBy("createdAt", "asc"));
+
+                // Dùng onSnapshot để tự động cập nhật UI khi có thay đổi
+                onSnapshot(q, (snapshot) => {
+                    const chapters = [];
+                    snapshot.forEach(doc => {
+                        chapters.push({ id: doc.id, ...doc.data() });
+                    });
+                    appState.chapters = chapters;
+                    renderChapterList();
+                    
+                    if (appState.selectedChapterId && !chapters.some(c => c.id === appState.selectedChapterId)) {
+                        selectChapter(chapters.length > 0 ? chapters[0].id : null);
+                    } else {
+                        selectChapter(appState.selectedChapterId);
+                    }
+                }, (error) => {
+                    console.error("Lỗi lắng nghe dữ liệu chương:", error);
+                    showToast("Không thể tải danh sách chương.", "error");
+                });
+
+            } catch (e) {
+                console.error("Lỗi tải dữ liệu ban đầu:", e);
+                showToast("Không thể tải dữ liệu từ cloud.", 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // ======================================================
+        // == CÁC HÀM QUẢN LÝ TRUYỆN MỚI ==
+        // ======================================================
+        async function showStorySelectionModal() {
+            const modal = DOMElements.storySelectionModal;
+            const listEl = DOMElements.cloudStoryList;
+            const loader = DOMElements.storyListLoader;
+
+            modal.classList.remove('hidden');
+            loader.classList.remove('hidden');
+            listEl.innerHTML = ''; // Xóa danh sách cũ
+            listEl.appendChild(loader);
+
+            try {
+                const storiesRef = collection(db, "users", userId, "stories");
+                const snapshot = await getDocs(storiesRef);
+
+                loader.classList.add('hidden');
+                if (snapshot.empty) {
+                    listEl.innerHTML = '<p class="text-center text-text-secondary p-8">Bạn chưa có truyện nào trên Cloud.</p>';
+                } else {
+                    snapshot.forEach(doc => {
+                        const storyData = doc.data();
+                        const storyItem = document.createElement('div');
+                        storyItem.className = 'p-3 bg-secondary border border-tertiary rounded-lg flex justify-between items-center';
+                        storyItem.innerHTML = `
+                            <div>
+                                <h5 class="font-bold text-white">${storyData.title || 'Truyện không có tên'}</h5>
+                                <p class="text-xs text-text-secondary">Lần cập nhật cuối: ${new Date(storyData.updatedAt?.toDate() || Date.now()).toLocaleString('vi-VN')}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button data-story-id="${doc.id}" data-story-title="${storyData.title}" class="edit-story-btn bg-tertiary text-white px-3 py-1 text-sm rounded-md hover:bg-tertiary/80"><i class="fa-solid fa-pencil"></i></button>
+                                <button data-story-id="${doc.id}" data-story-title="${storyData.title}" class="load-story-btn bg-accent-blue text-white px-3 py-1 text-sm rounded-md hover:bg-accent-blue/80">Tải</button>
+                                <button data-story-id="${doc.id}" class="delete-story-btn bg-danger/20 text-danger px-3 py-1 text-sm rounded-md hover:bg-danger/40"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        `;
+                        listEl.appendChild(storyItem);
+                    });
+                }
+            } catch (error) {
+                console.error("Lỗi tải danh sách truyện:", error);
+                loader.classList.add('hidden');
+                listEl.innerHTML = `<p class="text-center text-danger p-8">Không thể tải danh sách truyện. ${error.message}</p>`;
+            }
+        }
+
+        async function loadStoryFromCloud(storyId, storyTitle) {
+            toggleLoading(true);
+            try {
+                const storyDocRef = doc(db, "users", userId, "stories", storyId);
+                const docSnap = await getDoc(storyDocRef);
+
+                if (docSnap.exists()) {
+                    const cloudData = docSnap.data();
+                    appState.settings = cloudData.settings || {};
+                    
+                    const chaptersRef = collection(storyDocRef, "chapters");
+                    const chaptersSnap = await getDocs(query(chaptersRef, orderBy("createdAt", "asc")));
+                    appState.chapters = chaptersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                    // SỬA LỖI Ở ĐÂY
+                    appState.activeStoryId = storyId;
+                    appState.activeStoryTitle = storyTitle; // Lưu lại tên truyện đang mở
+
+                    renderSettingsToUI();
+                    renderChapterList();
+                    selectChapter(appState.chapters.length > 0 ? appState.chapters[0].id : null);
+
+                    DOMElements.currentStoryIndicator.textContent = `Đang mở truyện: ${storyTitle}`;
+                    DOMElements.saveCurrentStoryButton.disabled = false; // Kích hoạt nút "Lưu"
+                    DOMElements.storySelectionModal.classList.add('hidden');
+                    showToast(`Đã tải truyện "${storyTitle}"!`, 'success');
+                } else {
+                    throw new Error("Không tìm thấy truyện.");
+                }
+            } catch(error) {
+                console.error("Lỗi tải truyện:", error);
+                showToast(`Lỗi tải truyện: ${error.message}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function saveDataToCloud(isNewStory = false) {
+            if (!userId) { showToast("Cần đăng nhập.", 'warning'); return; }
+
+            let storyId = appState.activeStoryId;
+            let storyTitle = appState.activeStoryTitle;
+
+            if (isNewStory) {
+                // Lấy tên từ ô nhập khi tạo mới
+                storyTitle = DOMElements.newStoryTitleInput.value.trim();
+                if (!storyTitle) {
+                    showToast("Vui lòng nhập tên truyện để lưu.", 'warning');
+                    return;
+                }
+                storyId = `story_${Date.now()}`;
+            }
+
+            if (!storyId) {
+                showToast("Không có truyện nào đang được mở để lưu.", 'info');
+                return;
+            }
+            
+            if (!isNewStory) {
+                if (!await showConfirmationModal(`Bạn có chắc muốn ghi đè lên truyện "${storyTitle}" trên Cloud bằng phiên bản hiện tại?`, "Xác nhận lưu")) return;
+            }
+
+            toggleLoading(true);
+            const storyDocRef = doc(db, "users", userId, "stories", storyId);
+            
+            try {
+                await setDoc(storyDocRef, {
+                    title: storyTitle, // SỬA LỖI Ở ĐÂY: Luôn dùng tên đúng
+                    settings: appState.settings,
+                    updatedAt: new Date()
+                }, { merge: true });
+
+                const chaptersRef = collection(storyDocRef, "chapters");
+                const batch = writeBatch(db);
+                const oldChaptersSnap = await getDocs(chaptersRef);
+                oldChaptersSnap.forEach(doc => batch.delete(doc.ref));
+                appState.chapters.forEach(chapter => {
+                    const newChapterRef = doc(chaptersRef, chapter.id);
+                    batch.set(newChapterRef, chapter);
+                });
+                await batch.commit();
+
+                appState.activeStoryId = storyId;
+                appState.activeStoryTitle = storyTitle;
+                DOMElements.currentStoryIndicator.textContent = `Đang mở truyện: ${storyTitle}`;
+                DOMElements.saveCurrentStoryButton.disabled = false;
+                showToast(`Đã lưu truyện "${storyTitle}" lên Cloud!`, 'success');
+                await showStorySelectionModal(); // Tải lại danh sách
+            } catch (error) {
+                console.error("Lỗi lưu truyện:", error);
+                showToast(`Lỗi lưu truyện: ${error.message}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function deleteStoryFromCloud(storyId) {
+            if (!await showConfirmationModal("Bạn có chắc chắn muốn xóa vĩnh viễn truyện này khỏi Cloud? Hành động này không thể hoàn tác.")) return;
+            toggleLoading(true);
+            try {
+                const storyDocRef = doc(db, "users", userId, "stories", storyId);
+                // Cần xóa subcollection trước
+                const chaptersRef = collection(storyDocRef, "chapters");
+                const chaptersSnap = await getDocs(chaptersRef);
+                const batch = writeBatch(db);
+                chaptersSnap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+
+                await deleteDoc(storyDocRef);
+                showToast("Đã xóa truyện khỏi Cloud.", 'success');
+                await showStorySelectionModal();
+            } catch(error) {
+                console.error("Lỗi xóa truyện:", error);
+                showToast(`Lỗi xóa truyện: ${error.message}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function renameStory(storyId, oldTitle) {
+            const newTitle = prompt("Nhập tên mới cho truyện:", oldTitle);
+            if (newTitle && newTitle.trim() !== '' && newTitle !== oldTitle) {
+                toggleLoading(true);
+                try {
+                    const storyDocRef = doc(db, "users", userId, "stories", storyId);
+                    await updateDoc(storyDocRef, { title: newTitle });
+                    showToast("Đã đổi tên truyện thành công!", 'success');
+                    await showStorySelectionModal(); // Tải lại danh sách để hiển thị tên mới
+                } catch (error) {
+                    console.error("Lỗi đổi tên:", error);
+                    showToast("Lỗi đổi tên truyện.", 'error');
+                } finally {
+                    toggleLoading(false);
+                }
+            }
+        }
+
+        // --- Gemini API Functions ---
+        function getStoryBibleSummary() {
+            const { settings } = appState;
+            let summary = "";
+            if (settings.selectedGenres || settings.selectedWorlds || settings.selectedTropes) summary += `Thể loại: ${[settings.selectedGenres, settings.selectedWorlds, settings.selectedTropes].filter(Boolean).join(' - ')}\n`;
+            if (settings.step0CoreIdea) summary += `Ý tưởng: ${settings.step0CoreIdea}\n`;
+            if (settings.step1McOrigin) summary += `Nhân vật chính: ${settings.step1McOrigin}\n`;
+            if (settings.step1McPersonality) summary += `Tính cách: ${settings.step1McPersonality}\n`;
+            if (settings.styleTone) summary += `Tông màu: ${settings.styleTone}\n`;
+            return summary;
+        }
+
+        async function callGeminiForText(prompt, loadingElement = null, isJson = false) {
+            if (loadingElement) loadingElement.classList.add('ai-loading');
+            try {
+                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                 if (isJson) {
+                    payload.generationConfig = { "responseMimeType": "application/json" };
+                }
+                const apiKey = "AIzaSyAGnEpbJrAIZesB1RwU5ruTSzpak5wc3x4";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`Lỗi API: ${response.statusText}`);
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    let errorMessage = "Phản hồi từ AI không hợp lệ hoặc bị chặn.";
+                    if(result.promptFeedback?.blockReason){ errorMessage += ` Lý do: ${result.promptFeedback.blockReason}`; }
+                    throw new Error(errorMessage);
+                }
+            } catch (error) {
+                showToast(error.message, 'error');
+                return null;
+            } finally {
+                if (loadingElement) loadingElement.classList.remove('ai-loading');
+            }
+        }
+        
+        function constructGeminiPrompt(rewriteConfig = null) {
+            const { settings, chapters } = appState;
+            
+            let prompt = `Bạn là một nhà văn chuyên nghiệp, một người kể chuyện bậc thầy.`;
+            
+            if (rewriteConfig) {
+                const { chapter, feedback, chapterIndex } = rewriteConfig;
+                prompt += ` Nhiệm vụ của bạn là VIẾT LẠI **${chapter.title}** dựa trên góp ý của người đọc.`;
+            } else {
+                const nextChapterNumber = chapters.length + 1;
+                prompt += ` Nhiệm vụ của bạn là viết **Chương ${nextChapterNumber}** của một câu chuyện, dựa trên toàn bộ bối cảnh và các quy tắc sáng tác dưới đây.`;
+            }
+
+            prompt += "\n\n### CẨM NANG THẾ GIỚI (STORY BIBLE)\n\n";
+            // (The rest of the bible construction is the same)
+            prompt += "#### TAB 1: CƠ BẢN\n";
+            if (settings.selectedGenres || settings.selectedWorlds || settings.selectedTropes) prompt += `- Thể loại - Bối cảnh - Lưu phái: ${[settings.selectedGenres, settings.selectedWorlds, settings.selectedTropes].filter(Boolean).join(' - ')}\n`;
+            if (settings.step0CoreIdea) prompt += `- Ý tưởng cốt lõi: ${settings.step0CoreIdea}\n`;
+            if (settings.step0Theme) prompt += `- Chủ đề & Triết lý: ${settings.step0Theme}\n`;
+            if (settings.step1McOrigin) prompt += `- Nhân vật chính - Tên và Xuất thân: ${settings.step1McOrigin}\n`;
+            if (settings.step1McPersonality) prompt += `- Tính cách nhân vật: ${settings.step1McPersonality}\n`;
+            if (settings.step1McHobbies) prompt += `- Sở thích, hành vi đặc trưng: ${settings.step1McHobbies}\n`;
+            if (settings.step1McGoal) prompt += `- Mục tiêu cuối cùng: ${settings.step1McGoal}\n`;
+            if (settings.step1McAdvantage) prompt += `- Bàn tay vàng: ${settings.step1McAdvantage}\n`;
+            if (settings.step1McAdvantageFlaw) prompt += `- Khuyết điểm hoặc cái giá của bàn tay vàng: ${settings.step1McAdvantageFlaw}\n`;
+            prompt += "\n#### TAB 2: THẾ GIỚI\n";
+            if (settings.step1Realms) prompt += `- Cảnh giới tu luyện: ${settings.step1Realms}\n`;
+            if (settings.step1EnergySource) prompt += `- Nguồn năng lượng chính: ${settings.step1EnergySource}\n`;
+            if (settings.step1Breakthrough) prompt += `- Điều kiện đột phá: ${settings.step1Breakthrough}\n`;
+            if (settings.step2Talent) prompt += `- Thiên phú và thể chất: ${settings.step2Talent}\n`;
+            if (settings.step2Methods) prompt += `- Công pháp, kỹ năng, pháp bảo: ${settings.step2Methods}\n`;
+            if (settings.step2Challenges) prompt += `- Trở ngại tu luyện: ${settings.step2Challenges}\n`;
+            if (settings.step2History) prompt += `- Lịch sử - Truyền thuyết nổi bật: ${settings.step2History}\n`;
+            if (settings.step2Geography) prompt += `- Địa lý – Vị diện – Không gian: ${settings.step2Geography}\n`;
+            if (settings.step2WorldRules) prompt += `- Quy luật thế giới / Thiên đạo: ${settings.step2WorldRules}\n`;
+            if (settings.step2Factions) prompt += `- Thế lực và tổ chức: ${settings.step2Factions}\n`;
+            if (settings.step2Races) prompt += `- Chủng tộc và sinh vật: ${settings.step2Races}\n`;
+            if (settings.step2Economy) prompt += `- Kinh tế và tiền tệ: ${settings.step2Economy}\n`;
+            if (settings.step2Professions) prompt += `- Nghề nghiệp phụ trợ: ${settings.step2Professions}\n`;
+            if (settings.step2Infrastructure) prompt += `- Hạ tầng xã hội: ${settings.step2Infrastructure}\n`;
+            prompt += "\n#### TAB 3: CỐT TRUYỆN\n";
+            if (settings.step3Structure) prompt += `- Cấu trúc cốt truyện: ${settings.step3Structure}\n`;
+            if (settings.step3Techniques) prompt += `- Kỹ thuật gây nghiện: ${settings.step3Techniques}\n`;
+            if (settings.styleTone) prompt += `- Phong cách và tông màu: ${settings.styleTone}\n`;
+            if (settings.pov) prompt += `- Góc nhìn kể chuyện: ${DOMElements.settingPov.options[DOMElements.settingPov.selectedIndex].text}\n`;
+            prompt += "\n#### TAB 4: NÂNG CAO\n";
+            if (settings.step0Conflict) prompt += `- Xung đột nền tảng: ${settings.step0Conflict}\n`;
+            if (settings.step0Price) prompt += `- Cái giá phải trả: ${settings.step0Price}\n`;
+            if (settings.step4Mystery) prompt += `- Bí ẩn và yếu tố vĩ mô: ${settings.step4Mystery}\n`;
+            if (settings.step4Anomalies) prompt += `- Dị tượng – Quy tắc lạ: ${settings.step4Anomalies}\n`;
+            if (settings.step4Remnants) prompt += `- Tàn tích – Đồ cổ xưa: ${settings.step4Remnants}\n`;
+            if (settings.step5Details) prompt += `- Chi tiết đời thường để tạo chiều sâu: ${settings.step5Details}\n`;
+            if (settings.step5InternalConflicts) prompt += `- Tình huống "Nếu... thì sao?": ${settings.step5InternalConflicts}\n`;
+            if (settings.step5Perspectives) prompt += `- Góc nhìn đa chiều: ${settings.step5Perspectives}\n`;
+
+            if (settings.learnedStory) {
+                prompt += `\n### VĂN PHONG THAM CHIẾU (AI PHẢI HỌC THEO VĂN PHONG NÀY)\n${settings.learnedStory}\n`;
+            }
+
+            prompt += `\n### BỘ QUY TẮC SÁNG TÁC BẮT BUỘC (AI PHẢI TUÂN THỦ):\n`;
+            prompt += "1. **KHÔNG GIỚI THIỆU:** Bắt đầu ngay lập tức bằng hành động, đối thoại, hoặc miêu tả của chương. TUYỆT ĐỐI không viết những câu như 'Trong chương này...' hoặc 'Tiếp nối chương trước...'.\n";
+            prompt += `2. **NHẬP VAI NHÂN VẬT:** Mọi hành động, suy nghĩ, và lời nói của nhân vật chính phải tuyệt đối tuân thủ theo 'Tính cách nhân vật' đã được mô tả.\n`;
+            prompt += "3. **MỤC TIÊU CHƯƠNG:** Mỗi chương phải có 1 mục tiêu rõ ràng (gặp nhân vật mới, mở ra bí ẩn, thất bại, đột phá...). Cấm viết chương “trôi nổi không mục đích”.\n";
+            
+            if (rewriteConfig) {
+                const { chapter, feedback, chapterIndex } = rewriteConfig;
+                prompt += "4. **VIẾT LẠI:** Viết lại toàn bộ chương, không chỉ thêm thắt. Giữ lại tinh thần của chương cũ nhưng kết hợp nhuần nhuyễn góp ý mới.\n\n";
+                if (chapterIndex > 0) {
+                    const prevChapter = chapters[chapterIndex - 1];
+                    const snippet = prevChapter.content.replace(/<[^>]*>/g, ' ').trim();
+                    prompt += `### KẾT THÚC CHƯƠNG TRƯỚC (${prevChapter.title}):\n${snippet.slice(-500)}\n\n`;
+                }
+                prompt += `### NỘI DUNG CHƯƠNG GỐC (${chapter.title}):\n${chapter.content.replace(/<[^>]*>/g, ' ').substring(0, 1000)}...\n\n`;
+                prompt += `### GÓP Ý CỦA NGƯỜI ĐỌC (YÊU CẦU CẦN THỰC HIỆN):\n${feedback}\n\n`;
+                prompt += `### YÊU CẦU HIỆN TẠI:\nViết lại **${chapter.title}** theo góp ý trên, tuân thủ nghiêm ngặt tất cả các quy tắc đã nêu.`;
+            } else {
+                prompt += "4. **MÓC NỐI TÌNH TIẾT:** Nhiệm vụ quan trọng nhất là viết tiếp ngay sau đoạn 'KẾT THÚC CHƯƠNG TRƯỚC'.\n\n";
+                if (chapters.length > 0) {
+                    const recentChapter = chapters[chapters.length - 1];
+                    const snippet = recentChapter.content.replace(/<[^>]*>/g, ' ').trim();
+                    prompt += `### KẾT THÚC CHƯƠNG TRƯỚC (${recentChapter.title}):\n${snippet.slice(-500)}\n\n`;
+                }
+                prompt += `### YÊU CẦU HIỆN TẠI:\nViết **Chương ${chapters.length + 1}**, tuân thủ nghiêm ngặt tất cả các quy tắc đã nêu.`;
+            }
+            
+            return prompt;
+        }
+
+        function showChapterSkeleton() {
+            const skeleton = document.createElement('div');
+            skeleton.id = "chapter-skeleton";
+            skeleton.className = "space-y-3 p-3";
+            skeleton.innerHTML = `
+                <div class="h-4 w-3/4 skeleton-loader"></div>
+                <div class="h-3 w-full skeleton-loader"></div>
+                <div class="h-3 w-5/6 skeleton-loader"></div>
+            `;
+            DOMElements.chapterList.prepend(skeleton);
+        }
+
+        async function generateChapter() {
+            if (appState.isGenerating || !authReady) return;
+            toggleLoading(true, false);
+            showChapterSkeleton();
+            try {
+                const prompt = constructGeminiPrompt();
+                const rawText = await callGeminiForText(prompt);
+
+                if (rawText) {
+                    const sanitizedText = rawText.replace(/[\*\_#\[\]\(\)`]/g, '');
+                    const newContent = sanitizedText.trim().split('\n').filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
+                    
+                    // 1. Thêm chương vào danh sách trên máy (appState)
+                    const newId = addChapter(`Chương ${appState.chapters.length + 1}`, newContent);
+                    
+                    // 2. Cập nhật lại giao diện danh sách chương
+                    renderChapterList();
+                    
+                    // 3. Chọn và hiển thị chương mới tạo
+                    selectChapter(newId);
+
+                    // 4. Tự động vào chế độ đọc nếu cần
+                    if (!appState.autoGenerate) {
+                       enterReadingMode(newId);
+                    }
+                } else {
+                    appState.autoGenerate = false; 
+                    updateAutoGenUI();
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+                appState.autoGenerate = false; 
+                updateAutoGenUI();
+            } finally {
+                document.getElementById('chapter-skeleton')?.remove();
+                toggleLoading(false);
+                if (appState.autoGenerate) setTimeout(generateChapter, 5000);
+            }
+        }
+        // --- End Gemini API Functions ---
+
+        // --- Event Handlers ---
+        async function handleBrainstormClick(e) {
+            const button = e.target.closest('.brainstorm-btn');
+            if (!button || appState.isGenerating) return;
+
+            const targetId = button.dataset.target;
+            const promptType = button.dataset.promptType;
+            const targetEl = document.getElementById(targetId);
+            if (!targetEl) return;
+
+            // BƯỚC 1: Lấy nội dung gốc mà người dùng đã nhập.
+            const originalText = targetEl.value.trim();
+
+            // BƯỚC 2: Kiểm tra xem người dùng đã nhập gì chưa.
+            if (!originalText) {
+                showToast("Vui lòng nhập nội dung trước khi làm rõ.", 'warning');
+                return;
+            }
+
+            // BƯỚC 3: Thay đổi toàn bộ prompt từ "gợi ý" thành "làm rõ và tinh chỉnh".
+            // Chúng ta sẽ định nghĩa một prompt chung và các prompt cụ thể cho từng mục.
+            const basePrompt = `Hãy đóng vai một biên tập viên chuyên nghiệp. Đọc kỹ văn bản gốc dưới đây và viết lại cho nó súc tích, mạch lạc và rõ ràng hơn trong bối cảnh một câu chuyện thể loại "${(appState.settings.selectedGenres || "huyền huyễn")}". Giữ lại ý chính của người dùng.
+
+        Văn bản gốc: "${originalText}"
+
+        Bản tinh chỉnh:`;
+
+            // Chúng ta có thể tạo các prompt cụ thể hơn nếu muốn, nhưng một prompt chung mạnh mẽ thường hiệu quả.
+            // Nếu bạn muốn tùy chỉnh cho từng mục, bạn có thể làm như sau:
+            const specificPrompts = {
+                'core-idea':      `Làm rõ và cô đọng ý tưởng cốt lõi sau đây: "${originalText}"`,
+                'theme':          `Phát triển và làm rõ chủ đề hoặc triết lý sau: "${originalText}"`,
+                'mc-origin':      `Dựa trên ý tưởng: "${appState.settings.step0CoreIdea || "chưa có"}", hãy phát triển phần mô tả xuất thân của nhân vật chính sau cho hấp dẫn hơn: "${originalText}"`,
+                'mc-personality': `Làm cho phần mô tả tính cách nhân vật chính sau trở nên sắc nét và nhất quán hơn: "${originalText}"`,
+                'mc-goal':        `Làm cho mục tiêu của nhân vật chính sau đây trở nên thuyết phục và có chiều sâu hơn: "${originalText}"`,
+                'mc-advantage':   `Mô tả lại bàn tay vàng (lợi thế đặc biệt) sau đây một cách độc đáo và cân bằng hơn: "${originalText}"`,
+                'realms':         `Tinh chỉnh hệ thống cảnh giới tu luyện sau cho logic và thú vị hơn: "${originalText}"`,
+                'factions':       `Phát triển mô tả về thế lực/tổ chức sau cho có chiều sâu và vai trò rõ ràng hơn trong truyện: "${originalText}"`,
+                'conflict':       `Làm cho xung đột nền tảng sau trở nên kịch tính và hấp dẫn hơn: "${originalText}"`
+            };
+
+            // Chọn prompt để sử dụng. Bạn có thể chọn basePrompt hoặc specificPrompts[promptType]
+            const prompt = specificPrompts[promptType] || basePrompt;
+            if (!prompt) return;
+
+            // BƯỚC 4: Gọi AI và cập nhật kết quả (giữ nguyên)
+            const result = await callGeminiForText(prompt, button);
+            if (result) {
+                targetEl.value = result;
+                targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+                targetEl.focus();
+                showToast(`Đã tinh chỉnh mục "${targetEl.previousElementSibling.textContent}"!`, 'success');
+            }
+        }
+
+        async function handleSummarizeChapter() {
+            if (!appState.selectedChapterId || appState.isGenerating) return;
+            const button = DOMElements.summarizeChapterBtn;
+            button.classList.add('ai-loading');
+            try {
+                const chapterText = DOMElements.storyContent.innerText;
+                if (chapterText.trim().length < 50) {
+                    showToast("Chương quá ngắn để tóm tắt.", 'info');
+                    return;
+                }
+                const prompt = `Tóm tắt chương truyện sau đây trong khoảng 2-4 câu, tập trung vào sự kiện chính và cảm xúc nhân vật:\n\n---\n${chapterText.substring(0, 4000)}\n---`;
+                const summary = await callGeminiForText(prompt);
+                if (summary) {
+                    showInfoModal(summary, "✨ Tóm Tắt Chương");
+                }
+            } finally {
+                button.classList.remove('ai-loading');
+            }
+        }
+        
+        async function handleSuggestPlot() {
+            if (!appState.selectedChapterId || appState.isGenerating) return;
+            const button = DOMElements.suggestPlotBtn;
+            button.classList.add('ai-loading');
+            try {
+                const chapterText = DOMElements.storyContent.innerText;
+                const context = getStoryBibleSummary();
+                const prompt = `Dựa trên bối cảnh và đoạn kết của chương trước, hãy gợi ý 3 tình tiết bất ngờ hoặc hướng phát triển tiếp theo cho câu chuyện. Trình bày dưới dạng gạch đầu dòng.\n\nBỐI CẢNH:\n${context}\n\nĐOẠN KẾT CHƯƠNG TRƯỚC:\n...\n${chapterText.slice(-1000)}`;
+                const suggestions = await callGeminiForText(prompt);
+                if (suggestions) {
+                    showInfoModal(suggestions, "✨ Gợi Ý Tình Tiết");
+                }
+            } finally {
+                button.classList.remove('ai-loading');
+            }
+        }
+
+        async function handleGenerateImage() {
+            if (appState.isGenerating) return;
+            const button = DOMElements.generateImageBtn;
+            button.classList.add('ai-loading');
+
+            const { settings } = appState;
+            const imagePromptParts = [
+                "epic fantasy digital painting, book cover illustration, cinematic, detailed, high fantasy art",
+                settings.styleTone ? `style of ${settings.styleTone}` : "style of trending on artstation",
+                settings.step1McOrigin ? `character: ${settings.step1McOrigin}` : "",
+                settings.step1McPersonality ? `personality: ${settings.step1McPersonality}` : "",
+                settings.selectedWorlds ? `world: ${settings.selectedWorlds}` : "in a fantasy world",
+                settings.step1McGoal ? `action: pursuing the goal of ${settings.step1McGoal}` : ""
+            ];
+            const imagePrompt = imagePromptParts.filter(p => p).join(", ");
+            
+            DOMElements.imageGenModal.classList.remove('hidden');
+            DOMElements.imageGenLoader.classList.remove('hidden');
+            DOMElements.imageGenResult.classList.add('hidden');
+            
+            try {
+                const payload = { instances: [{ prompt: imagePrompt }], parameters: { "sampleCount": 1} };
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`Lỗi tạo ảnh: ${response.statusText}`);
+                const result = await response.json();
+
+                if (result.predictions?.[0]?.bytesBase64Encoded) {
+                    const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    DOMElements.generatedImage.src = imageUrl;
+                    DOMElements.generatedImagePrompt.textContent = "Prompt: " + imagePrompt;
+                    DOMElements.imageGenLoader.classList.add('hidden');
+                    DOMElements.imageGenResult.classList.remove('hidden');
+                } else {
+                    throw new Error("Không nhận được dữ liệu ảnh từ AI.");
+                }
+            } catch (error) {
+                showToast(error.message, 'error');
+                DOMElements.imageGenModal.classList.add('hidden');
+            } finally {
+                button.classList.remove('ai-loading');
+            }
+        }
+
+        function applyBibleData(data) {
+            for (const key in data) {
+                if (appState.settings.hasOwnProperty(key)) {
+                    appState.settings[key] = data[key] || '';
+                }
+            }
+            renderSettingsToUI();
+            saveSettings(); // Save all new settings at once
+        }
+        
+        async function handleStoryBibleGeneration(mode) {
+             const settingKeys = Object.keys(appState.settings).filter(k => k.startsWith('step') || k.startsWith('selected'));
+             let prompt;
+
+            if (mode === 'full') {
+                prompt = `Bạn là một biên kịch/nhà văn sáng tạo chuyên về thể loại truyện mạng. Nhiệm vụ của bạn là tạo ra một "Cẩm nang Thế giới" (Story Bible) hoàn chỉnh và độc đáo cho một câu chuyện mới. Hãy tự do sáng tạo một ý tưởng cốt lõi thật hấp dẫn, sau đó phát triển toàn bộ các mục còn lại dựa trên ý tưởng đó.
+                Yêu cầu đầu ra phải ở định dạng JSON. Key của JSON phải khớp chính xác với danh sách sau: ${JSON.stringify(settingKeys)}.
+                Hãy đảm bảo tất cả các trường đều có nội dung súc tích, hợp lý và liên kết chặt chẽ với nhau.`;
+            } else { // Partial mode
+                const filledData = {};
+                const emptyKeys = [];
+                let hasFilledData = false;
+
+                for(const key of settingKeys) {
+                    if (appState.settings[key] && String(appState.settings[key]).trim() !== '') {
+                        filledData[key] = appState.settings[key];
+                        hasFilledData = true;
+                    } else {
+                        emptyKeys.push(key);
+                    }
+                }
+                
+                if (!hasFilledData) {
+                    showToast("Vui lòng nhập ít nhất một thông tin để AI có cơ sở gợi ý.", "info");
+                    return;
+                }
+
+                if (emptyKeys.length === 0) {
+                     showToast("Tất cả các mục đã được điền.", "info");
+                     return;
+                }
+
+                prompt = `Bạn là một biên kịch/nhà văn sáng tạo. Nhiệm vụ của bạn là hoàn thiện một "Cẩm nang Thế giới" đang dang dở.
+                Dưới đây là những thông tin tác giả đã cung cấp:
+                ---
+                ${JSON.stringify(filledData, null, 2)}
+                ---
+                Dựa vào bối cảnh trên, hãy điền vào các mục còn trống. Giữ cho các ý tưởng mới liên kết chặt chẽ với thông tin đã có.
+                Yêu cầu đầu ra phải ở định dạng JSON. Key của JSON phải khớp chính xác với danh sách các mục CÒN TRỐNG sau đây: ${JSON.stringify(emptyKeys)}.
+                Chỉ trả về JSON cho các mục còn trống.`;
+            }
+
+            DOMElements.sidebarLoadingOverlay.style.display = 'flex';
+            appState.isGenerating = true;
+            updateUIStates();
+
+            try {
+                const resultJsonString = await callGeminiForText(prompt, null, true);
+                if(resultJsonString) {
+                    // Clean the string: remove markdown backticks and trim whitespace
+                    let cleanedJsonString = resultJsonString.trim();
+                    if (cleanedJsonString.startsWith("```json")) {
+                        cleanedJsonString = cleanedJsonString.substring(7);
+                    } else if (cleanedJsonString.startsWith("```")) {
+                        cleanedJsonString = cleanedJsonString.substring(3);
+                    }
+                    if (cleanedJsonString.endsWith("```")) {
+                        cleanedJsonString = cleanedJsonString.slice(0, -3);
+                    }
+                    
+                    const bibleData = JSON.parse(cleanedJsonString.trim()); // Parse the cleaned string
+                    applyBibleData(bibleData);
+                    showToast("AI đã hoàn thành việc gợi ý cẩm nang!", "success");
+                }
+            } catch (error) {
+                showToast("Lỗi khi tạo cẩm nang: " + error.message, "error");
+            } finally {
+                DOMElements.sidebarLoadingOverlay.style.display = 'none';
+                appState.isGenerating = false;
+                updateUIStates();
+            }
+        }
+        
+        // --- End Event Handlers ---
+
+        function setupTabs() {
+            const tabs = DOMElements.settingsTabs.querySelectorAll('.tab-button');
+            const contents = DOMElements.settingsTabContent.querySelectorAll('.tab-content');
+
+            const switchTab = (tabButton) => {
+                const tabName = tabButton.dataset.tab;
+                
+                tabs.forEach(tab => tab.classList.remove('active'));
+                tabButton.classList.add('active');
+
+                contents.forEach(content => {
+                    content.classList.toggle('active', content.id === `tab-content-${tabName}`);
+                });
+            };
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab));
+            });
+
+            switchTab(tabs[0]);
+        }
+        
+        function setupReadingModeListeners() {
+            DOMElements.readingFontBtn.addEventListener('click', () => {
+                appState.readingMode.font = appState.readingMode.font === 'sans' ? 'serif' : 'sans';
+                applyReadingModeSettings();
+            });
+
+            DOMElements.readingToolbar.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    appState.readingMode.theme = btn.dataset.theme;
+                    applyReadingModeSettings();
+                });
+            });
+
+            DOMElements.readingChapterListBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                DOMElements.readingChapterListPopup.classList.toggle('hidden');
+            });
+            
+            DOMElements.readingModeView.addEventListener('click', () => {
+                 DOMElements.readingChapterListPopup.classList.add('hidden');
+            });
+
+            DOMElements.readingModeNewChapterBtn.addEventListener('click', () => {
+                exitReadingMode();
+                generateChapter();
+            });
+
+            DOMElements.exportStoryBtn.addEventListener('click', () => {
+                DOMElements.exportModal.classList.remove('hidden');
+            });
+
+            DOMElements.exportModalCancelBtn.addEventListener('click', () => {
+                DOMElements.exportModal.classList.add('hidden');
+            });
+            
+            DOMElements.feedbackBtn.addEventListener('click', () => {
+                if (!appState.readingMode.currentVisibleChapterId) {
+                    showToast("Không xác định được chương hiện tại.", "info");
+                    return;
+                }
+                 DOMElements.feedbackModal.classList.remove('hidden');
+            });
+            
+            DOMElements.feedbackModalCancelBtn.addEventListener('click', () => {
+                DOMElements.feedbackModal.classList.add('hidden');
+            });
+
+            DOMElements.feedbackModalSubmitBtn.addEventListener('click', async () => {
+                const feedbackText = DOMElements.feedbackTextarea.value;
+                if (!feedbackText.trim()) {
+                    showToast("Vui lòng nhập góp ý.", "info");
+                    return;
+                }
+                const chapterId = appState.readingMode.currentVisibleChapterId;
+                const chapterIndex = appState.chapters.findIndex(c => c.id === chapterId);
+                if (chapterIndex === -1) return;
+
+                const chapter = appState.chapters[chapterIndex];
+                
+                DOMElements.feedbackModal.classList.add('hidden');
+                exitReadingMode();
+                toggleLoading(true, true);
+
+                const prompt = constructGeminiPrompt({ chapter, feedback: feedbackText, chapterIndex });
+                const rawText = await callGeminiForText(prompt);
+
+                if (rawText) {
+                    const sanitizedText = rawText.replace(/[\*\_#\[\]\(\)`]/g, '');
+                    const newContent = sanitizedText.trim().split('\n').filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
+                    await updateChapter(chapterId, newContent);
+                    showToast(`Đã viết lại "${chapter.title}"!`, 'success');
+                    selectChapter(chapterId); // Reselect to update main view
+                }
+                toggleLoading(false, true);
+
+            });
+
+            DOMElements.readingModeContent.addEventListener('scroll', () => {
+                clearTimeout(scrollSaveTimeout);
+                scrollSaveTimeout = setTimeout(() => {
+                    let currentChapterId = null;
+                    let minDistance = Infinity;
+
+                    const containerTop = DOMElements.readingModeContent.getBoundingClientRect().top;
+
+                    appState.chapters.forEach(chapter => {
+                        const element = document.getElementById(`reading-chapter-${chapter.id}`);
+                        if (element) {
+                            const distance = Math.abs(element.getBoundingClientRect().top - containerTop);
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                currentChapterId = chapter.id;
+                            }
+                        }
+                    });
+
+                    if (currentChapterId) {
+                        const element = document.getElementById(`reading-chapter-${currentChapterId}`);
+                        appState.readingMode.lastReadChapterId = currentChapterId;
+                        appState.readingMode.lastReadScrollTop = DOMElements.readingModeContent.scrollTop - (element.offsetTop - DOMElements.readingModeContent.offsetTop);
+                        appState.readingMode.currentVisibleChapterId = currentChapterId;
+                        saveSettings();
+                    }
+                }, 500);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            DOMElements = {};
+            document.querySelectorAll('[id]').forEach(el => {
+                const camelCaseId = el.id.replace(/-([a-z])/g, g => g[1].toUpperCase());
+                DOMElements[camelCaseId] = el;
+            });
+            
+            renderTags();
+            initializeFirebase();
+            initializeSpeech();
+            setupTabs();
+            setupReadingModeListeners(); // Setup listeners for the reading mode
+
+            const toggleSidebar = (show) => {
+                DOMElements.sidebar.classList.toggle('-translate-x-full', !show);
+                DOMElements.sidebarOverlay.classList.toggle('opacity-0', !show);
+                DOMElements.sidebarOverlay.classList.toggle('pointer-events-none', !show);
+            };
+
+            DOMElements.menuToggleBtn.addEventListener('click', () => toggleSidebar(true));
+            DOMElements.closeMenuBtn.addEventListener('click', () => toggleSidebar(false));
+            DOMElements.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+
+            let saveSettingsTimeout;
+            DOMElements.settingsTabContent.addEventListener('input', (e) => {
+                if(e.target.matches('textarea[id^="setting-"], select[id^="setting-"]')) {
+                    const key = e.target.id.replace('setting-', '');
+                    if(appState.settings.hasOwnProperty(key)) {
+                        appState.settings[key] = e.target.value;
+                        clearTimeout(saveSettingsTimeout);
+                        saveSettingsTimeout = setTimeout(saveSettings, 1500);
+                    }
+                }
+            });
+
+            DOMElements.settingsTabContent.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tag-btn')) {
+                    const { category, tag } = e.target.dataset;
+                    e.target.classList.toggle('active');
+                    const stateKey = `selected${capitalize(category)}s`;
+                    const currentTags = appState.settings[stateKey] ? appState.settings[stateKey].split(', ').filter(t=>t) : [];
+                    const tagIndex = currentTags.indexOf(tag);
+                    if (tagIndex > -1) currentTags.splice(tagIndex, 1);
+                    else currentTags.push(tag);
+                    appState.settings[stateKey] = currentTags.join(', ');
+                    DOMElements[`display${capitalize(category)}`].value = appState.settings[stateKey];
+                    clearTimeout(saveSettingsTimeout);
+                    saveSettingsTimeout = setTimeout(saveSettings, 1500);
+                } else {
+                    handleBrainstormClick(e);
+                }
+            });
+
+            DOMElements.suggestionEngineBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const menu = DOMElements.suggestionDropdownMenu;
+                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+            });
+            
+            DOMElements.suggestAllBtn.addEventListener('click', async () => {
+                DOMElements.suggestionDropdownMenu.style.display = 'none';
+                if (await showConfirmationModal("AI sẽ điền vào TẤT CẢ các mục cài đặt truyện. Mọi thông tin bạn đã nhập sẽ bị ghi đè. Bạn có chắc chắn muốn tiếp tục?", "Gợi Ý Toàn Bộ")) {
+                     handleStoryBibleGeneration('full');
+                }
+            });
+            DOMElements.suggestPartialBtn.addEventListener('click', async () => {
+                DOMElements.suggestionDropdownMenu.style.display = 'none';
+                if (await showConfirmationModal("AI sẽ điền vào các mục còn trống dựa trên những gì bạn đã nhập. Các mục đã có nội dung sẽ không thay đổi. Tiếp tục?", "Gợi Ý Dựa Trên Thông Tin")) {
+                     handleStoryBibleGeneration('partial');
+                }
+            });
+
+            window.addEventListener('click', () => {
+                 DOMElements.suggestionDropdownMenu.style.display = 'none';
+            });
+
+
+            DOMElements.uploadLearnedStoryBtn.addEventListener('click', () => DOMElements.learnedStoryFileInput.click());
+
+            DOMElements.learnedStoryFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file || !file.type.match('text.*')) {
+                    if(file) showToast('Vui lòng chọn một file .txt', 'error');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    DOMElements.settingLearnedStory.value = event.target.result;
+                    DOMElements.settingLearnedStory.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                reader.onerror = () => showToast('Lỗi khi đọc file.', 'error');
+                reader.readAsText(file);
+                e.target.value = '';
+            });
+
+            DOMElements.generateChapterBtn.addEventListener('click', generateChapter);
+            DOMElements.autoGenToggle.addEventListener('click', () => {
+                if (DOMElements.autoGenToggle.disabled) return;
+                appState.autoGenerate = !appState.autoGenerate;
+                updateAutoGenUI();
+                if (appState.autoGenerate && !appState.isGenerating) generateChapter();
+            });
+
+            DOMElements.chapterList.addEventListener('click', (e) => {
+                const item = e.target.closest('.chapter-item');
+                if (item) selectChapter(item.dataset.chapterId);
+            });
+
+            DOMElements.storyContent.addEventListener('input', () => {
+                if (appState.selectedChapterId) DOMElements.saveChapterBtn.classList.remove('hidden');
+            });
+
+            DOMElements.saveChapterBtn.addEventListener('click', () => {
+                if (appState.selectedChapterId) updateChapter(appState.selectedChapterId, DOMElements.storyContent.innerHTML);
+            });
+
+            DOMElements.deleteChapterBtn.addEventListener('click', () => {
+                if (appState.selectedChapterId) deleteChapter(appState.selectedChapterId);
+            });
+            DOMElements.deleteAllBtn.addEventListener('click', deleteAllChapters);
+            
+            // AI Tool buttons
+            DOMElements.summarizeChapterBtn.addEventListener('click', handleSummarizeChapter);
+            DOMElements.suggestPlotBtn.addEventListener('click', handleSuggestPlot);
+            DOMElements.generateImageBtn.addEventListener('click', handleGenerateImage);
+            DOMElements.closeImageModalBtn.addEventListener('click', () => DOMElements.imageGenModal.classList.add('hidden'));
+
+            // TTS Buttons
+            DOMElements.playPauseBtn.addEventListener('click', () => {
+                if (!appState.selectedChapterId) return;
+                if (appState.tts.playerStatus === 'playing') {
+                    appState.tts.synth.pause();
+                    updatePlayerUI('paused');
+                } else if (appState.tts.playerStatus === 'paused') {
+                    appState.tts.synth.resume();
+                    updatePlayerUI('playing');
+                } else {
+                    playCurrentChapter();
+                }
+            });
+            DOMElements.prevTrackBtn.addEventListener('click', () => {
+                const prevIdx = appState.currentChapterIndex - 1;
+                if (prevIdx >= 0) {
+                    selectChapter(appState.chapters[prevIdx].id);
+                    setTimeout(() => playCurrentChapter(), 500);
+                }
+            });
+            DOMElements.nextTrackBtn.addEventListener('click', () => {
+                const nextIdx = appState.currentChapterIndex + 1;
+                if (nextIdx < appState.chapters.length) {
+                    selectChapter(appState.chapters[nextIdx].id);
+                    setTimeout(() => playCurrentChapter(), 500);
+                }
+            });
+            DOMElements.voiceSelect.addEventListener('change', (e) => {
+                appState.tts.vietnameseVoice = appState.tts.voices.find(v => v.name === e.target.value);
+                if (appState.tts.playerStatus !== 'stopped') {
+                    const wasPaused = appState.tts.playerStatus === 'paused';
+                    const currentP = appState.tts.currentParagraphIndex;
+                    stopReading();
+                    setTimeout(() => {
+                        _prepareAndStartSpeakingChapter(currentP);
+                        if (wasPaused) setTimeout(() => { appState.tts.synth.pause(); updatePlayerUI('paused'); }, 100);
+                    }, 200);
+                }
+            });
+            
+            DOMElements.speedControl.addEventListener('input', (e) => {
+                const speed = parseFloat(e.target.value);
+                DOMElements.speedLabel.textContent = `${speed.toFixed(1)}x`;
+                if (appState.tts.playerStatus !== 'stopped') {
+                    const wasPaused = appState.tts.playerStatus === 'paused';
+                    const currentP = appState.tts.currentParagraphIndex;
+                    stopReading();
+                    setTimeout(() => {
+                        _prepareAndStartSpeakingChapter(currentP);
+                        if (wasPaused) setTimeout(() => { appState.tts.synth.pause(); updatePlayerUI('paused'); }, 100);
+                    }, 200);
+                }
+            });
+            
+            DOMElements.focusModeBtn.addEventListener('click', toggleFocusMode);
+            DOMElements.exitReadingModeBtn.addEventListener('click', exitReadingMode);
+            DOMElements.enterReadingModeBtn.addEventListener('click', () => enterReadingMode(appState.selectedChapterId));
+
+
+            DOMElements.exportJsonBtn.addEventListener('click', async () => {
+                if (!authReady || !userId) return;
+                toggleLoading(true);
+                try {
+                    const dataToExport = { settings: appState.settings, chapters: appState.chapters };
+                    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'ai_story_workshop_data.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast("Đã xuất dữ liệu!", 'success');
+                } catch (e) { showToast("Lỗi xuất dữ liệu.", 'error'); }
+                finally { toggleLoading(false); }
+            });
+
+            DOMElements.importJsonBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'application/json';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (!await showConfirmationModal("Nhập file sẽ ghi đè lên tất cả cài đặt và chương hiện có. Tiếp tục?")) return;
+                    toggleLoading(true, true);
+                    try {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        if (data.settings && Array.isArray(data.chapters)) {
+                           
+                            const settingsRef = doc(db, getUserCollectionPath('settings'), 'user_settings');
+                            await setDoc(settingsRef, data.settings);
+
+                            const chaptersRef = collection(db, getUserCollectionPath('chapters'));
+                            const existingChaptersSnap = await getDocs(chaptersRef);
+                            const batch = writeBatch(db);
+                            existingChaptersSnap.forEach(doc => batch.delete(doc.ref));
+                            
+                            data.chapters.forEach(chapter => {
+                                const newChapterRef = doc(chaptersRef);
+                                const newChapterData = { ...chapter, createdAt: chapter.createdAt || Date.now() };
+                                batch.set(newChapterRef, newChapterData);
+                            });
+                            
+                            await batch.commit();
+                            await loadInitialData();
+                            showToast("Nhập dữ liệu thành công!", 'success');
+                        } else { throw new Error("Tệp JSON không hợp lệ."); }
+                    } catch (err) { showToast(`Lỗi nhập dữ liệu: ${err.message}`, 'error'); }
+                    finally { toggleLoading(false, true); }
+                };
+                input.click();
+            });
+
+            // QUẢN LÝ TRUYỆN
+            DOMElements.manageCloudStoriesButton.addEventListener('click', showStorySelectionModal);
+            DOMElements.closeStorySelectionBtn.addEventListener('click', () => {
+                DOMElements.storySelectionModal.classList.add('hidden');
+            });
+
+            DOMElements.saveNewStoryButton.addEventListener('click', () => {
+                saveDataToCloud(true); // true nghĩa là isNewStory
+            });
+
+            DOMElements.saveCurrentStoryButton.addEventListener('click', () => {
+                saveDataToCloud(false); // false nghĩa là lưu đè truyện hiện tại
+            });
+
+            DOMElements.cloudStoryList.addEventListener('click', e => {
+                const loadBtn = e.target.closest('.load-story-btn');
+                if (loadBtn) {
+                    loadStoryFromCloud(loadBtn.dataset.storyId, loadBtn.dataset.storyTitle);
+                    return;
+                }
+                const deleteBtn = e.target.closest('.delete-story-btn');
+                if (deleteBtn) {
+                    deleteStoryFromCloud(deleteBtn.dataset.storyId);
+                    return;
+                }
+                const editBtn = e.target.closest('.edit-story-btn');
+                if (editBtn) {
+                    renameStory(editBtn.dataset.storyId, editBtn.dataset.storyTitle);
+                    return;
+                }
+            });
+            
+            // Sửa lại hàm Import từ file
+            DOMElements.importStoryFromFileBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async e => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    try {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        if (data.settings && Array.isArray(data.chapters)) {
+                            appState.settings = data.settings;
+                            appState.chapters = data.chapters;
+                            appState.activeStoryId = null; // Đây là truyện local, chưa có trên cloud
+                            renderSettingsToUI();
+                            renderChapterList();
+                            selectChapter(appState.chapters.length > 0 ? appState.chapters[0].id : null);
+                            DOMElements.storySelectionModal.classList.add('hidden');
+                            DOMElements.currentStoryIndicator.textContent = "Đang mở truyện từ file (chưa lưu cloud).";
+                            DOMElements.saveCurrentStoryButton.disabled = true;
+                            showToast("Đã nhập truyện từ file thành công!", "success");
+                        } else { throw new Error("File JSON không hợp lệ."); }
+                    } catch(err) {
+                        showToast(`Lỗi nhập file: ${err.message}`, 'error');
+                    }
+                };
+                input.click();
+            });
+
+        // THÊM CÁC LISTENER MỚI CHO VIỆC ĐĂNG NHẬP
+        document.getElementById('login-button').addEventListener('click', loginWithGoogle);
+        document.getElementById('logout-button').addEventListener('click', logoutUser);
+        });
+    </script>
+</body>
+</html>
