@@ -45,6 +45,24 @@
         }
     </script>
     <style>
+        /* === CSS SỬA LỖI HIỂN THỊ POPUP === */
+        /* Quy định thứ tự lớp hiển thị cho các cửa sổ popup */
+        #sidebar-overlay { z-index: 30; }
+        #sidebar { z-index: 40; }
+        #story-selection-modal { z-index: 50; }
+        #reading-mode-view { z-index: 50; }
+
+        /* Các popup con phải có z-index cao hơn */
+        #confirmation-modal    { z-index: 60; }
+        #image-gen-modal       { z-index: 60; }
+        #export-modal          { z-index: 60; }
+        #feedback-modal        { z-index: 60; }
+        #character-chat-modal  { z-index: 60; }
+
+        /* Lớp tải và thông báo phải ở trên cùng */
+        #loading-overlay       { z-index: 70; }
+        #toast-container       { z-index: 80; }
+
         #reading-mode-content {
             text-align: justify;
             /* Canh đều hai bên */
@@ -826,7 +844,10 @@
                         </div>
                     </div>
                     <div id="chapter-list" class="flex-grow overflow-y-auto space-y-2 pr-2">
-                    </div>
+                        </div>
+                    <button id="delete-selected-chapters-btn" class="hidden w-full mt-2 bg-danger/20 text-danger p-2 rounded-md text-sm font-semibold hover:bg-danger/40 transition-colors">
+                        <i class="fa-solid fa-trash-can"></i> Xóa các mục đã chọn
+                    </button>
                     <div id="continuous-gen-notification"
                         class="hidden text-sm text-center text-accent-green bg-accent-green/10 p-2 mt-2 rounded-md">AI
                         đang tự động tạo chương mới...</div>
@@ -916,22 +937,16 @@
 
         <div id="reading-mode-view"
             class="fixed inset-0 bg-primary p-4 sm:p-8 lg:p-12 z-50 hidden opacity-0 font-sans theme-dark">
-            <div id="reading-toolbar"
-                class="fixed top-4 left-1/2 -translate-x-1/2 bg-secondary/80 backdrop-blur-sm p-2 rounded-full flex items-center gap-1 z-10">
-                <button id="reading-chapter-list-btn"
-                    class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg"
-                    title="Danh sách chương"><i class="fa-solid fa-list-ul"></i></button>
+            <div id="reading-toolbar" class="fixed top-4 left-1/2 -translate-x-1/2 bg-secondary/80 backdrop-blur-sm p-2 rounded-full flex items-center gap-1 z-10">
+                <button id="reading-chapter-list-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg" title="Danh sách chương"><i class="fa-solid fa-list-ul"></i></button>
                 <div class="w-px h-5 bg-tertiary"></div>
-
+                
                 <div class="relative">
-                    <button id="font-settings-btn"
-                        class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg"
-                        title="Tùy chỉnh Font"><i class="fa-solid fa-font"></i></button>
-                    <div id="font-settings-popup"
-                        class="hidden absolute bottom-14 left-1/2 -translate-x-1/2 bg-secondary border border-tertiary rounded-lg shadow-lg w-64 p-4">
+                    <button id="font-settings-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center text-lg" title="Tùy chỉnh Font"><i class="fa-solid fa-font"></i></button>
+                    <div id="font-settings-popup" class="hidden absolute top-14 left-1/2 -translate-x-1/2 bg-secondary border border-tertiary rounded-lg shadow-lg w-64 p-4">
                         <p class="text-sm font-medium text-text-secondary mb-2">Font chữ</p>
                         <select id="font-family-select" class="w-full bg-tertiary rounded p-2 text-sm mb-3"></select>
-
+                        
                         <p class="text-sm font-medium text-text-secondary mb-2">Kích thước chữ</p>
                         <div class="flex items-center gap-2">
                             <button id="decrease-font-size-btn" class="w-8 h-8 bg-tertiary rounded">-</button>
@@ -940,26 +955,17 @@
                         </div>
                     </div>
                 </div>
-
+            
                 <div class="w-px h-5 bg-tertiary"></div>
-                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-primary border-2" data-theme="dark"
-                    title="Nền Tối"></button>
-                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-light" data-theme="light"
-                    title="Nền Sáng"></button>
-                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-sepia" data-theme="sepia"
-                    title="Nền Sepia"></button>
+                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-primary border-2" data-theme="dark" title="Nền Tối"></button>
+                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-light" data-theme="light" title="Nền Sáng"></button>
+                <button class="reading-toolbar-btn theme-btn w-8 h-8 rounded-full bg-bg-sepia" data-theme="sepia" title="Nền Sepia"></button>
                 <div class="w-px h-5 bg-tertiary"></div>
-                <button id="export-story-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center"
-                    title="Tải Truyện"><i class="fa-solid fa-download"></i></button>
-                <button id="feedback-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center"
-                    title="Góp Ý & Viết Lại"><i class="fa-solid fa-comment-dots"></i></button>
-                <button id="reading-mode-new-chapter-btn"
-                    class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tạo Chương Mới"><i
-                        class="fa-solid fa-plus"></i></button>
+                <button id="export-story-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tải Truyện"><i class="fa-solid fa-download"></i></button>
+                <button id="feedback-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Góp Ý & Viết Lại"><i class="fa-solid fa-comment-dots"></i></button>
+                <button id="reading-mode-new-chapter-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Tạo Chương Mới"><i class="fa-solid fa-plus"></i></button>
                 <div class="w-px h-5 bg-tertiary"></div>
-                <button id="exit-reading-mode-btn"
-                    class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Thoát"><i
-                        class="fa-solid fa-times"></i></button>
+                <button id="exit-reading-mode-btn" class="reading-toolbar-btn w-10 h-10 flex items-center justify-center" title="Thoát"><i class="fa-solid fa-times"></i></button>
             </div>
 
             <div id="reading-chapter-list-popup"
@@ -1146,7 +1152,8 @@
             characterChat: {
                 history: [],
                 isLoading: false
-            }
+            },
+            chaptersToDelete: []
         };
 
         let DOMElements;
@@ -1647,6 +1654,29 @@
             selectChapter(newSelectedId);
         }
 
+        async function deleteSelectedChapters() {
+            const count = appState.chaptersToDelete.length;
+            if (count === 0) return;
+
+            if (!await showConfirmationModal(`Bạn có chắc muốn xóa vĩnh viễn <strong>${count} chương</strong> đã chọn?`)) return;
+
+            // Lọc ra danh sách chương mới
+            appState.chapters = appState.chapters.filter(chapter => !appState.chaptersToDelete.includes(chapter.id));
+
+            // Reset lại danh sách cần xóa
+            appState.chaptersToDelete = [];
+
+            saveStateToLocal(); // Lưu lại thay đổi
+            renderChapterList(); // Vẽ lại danh sách chương
+            DOMElements.deleteSelectedChaptersBtn.classList.add('hidden'); // Ẩn nút xóa
+            showToast(`Đã xóa ${count} chương.`, 'success');
+
+            // Chọn lại chương đầu tiên nếu chương đang được chọn đã bị xóa
+            if (!appState.chapters.some(c => c.id === appState.selectedChapterId)) {
+                selectChapter(appState.chapters.length > 0 ? appState.chapters[0].id : null);
+            }
+        }
+
         async function deleteAllChapters() {
             if (!await showConfirmationModal("Xóa TẤT CẢ các chương? Hành động này không thể hoàn tác.")) return;
             appState.chapters = [];
@@ -1704,20 +1734,29 @@
                 DOMElements.chapterList.innerHTML = '<p class="text-text-secondary text-center p-4">Chưa có chương nào.</p>';
             } else {
                 appState.chapters.forEach((chapter, index) => {
+                    // Kiểm tra xem chương này có nằm trong danh sách cần xóa không
+                    const isChecked = appState.chaptersToDelete.includes(chapter.id);
                     const item = document.createElement('div');
-                    item.className = `chapter-item p-3 rounded-lg cursor-pointer hover:bg-tertiary flex justify-between items-start`;
+                    
+                    // Thêm class 'has-checkbox' để xử lý sự kiện click tốt hơn
+                    item.className = `chapter-item has-checkbox p-3 rounded-lg cursor-pointer hover:bg-tertiary flex justify-between items-center gap-3`;
                     item.dataset.chapterId = chapter.id;
-                    const snippet = chapter.content.replace(/<[^>]*>/g, ' ').trim();
+                    
+                    // Cập nhật innerHTML để chứa checkbox
                     item.innerHTML = `
-                        <div>
-                            <h4 class="font-bold text-white">${chapter.title}</h4>
-                            <p class="text-text-secondary text-sm line-clamp-1">${snippet.substring(0, 50)}...</p>
+                        <div class="flex-shrink-0">
+                            <input type="checkbox" class="chapter-checkbox w-5 h-5 accent-pink-500 bg-gray-700 rounded border-gray-600 focus:ring-pink-600 ring-offset-gray-800 focus:ring-2" ${isChecked ? 'checked' : ''}>
                         </div>
-                        <span class="text-xs font-mono text-text-secondary/50">#${index + 1}</span>
+                        <div class="flex-grow overflow-hidden">
+                            <h4 class="font-bold text-white truncate">${chapter.title}</h4>
+                            <p class="text-text-secondary text-sm truncate">${chapter.content.replace(/<[^>]*>/g, ' ').trim().substring(0, 50)}...</p>
+                        </div>
+                        <span class="flex-shrink-0 text-xs font-mono text-text-secondary/50">#${index + 1}</span>
                     `;
                     DOMElements.chapterList.appendChild(item);
                 });
             }
+            // Dòng này có thể sẽ được thay đổi ở bước sau, tạm thời giữ lại
             DOMElements.deleteAllBtn.disabled = appState.chapters.length === 0;
             DOMElements.deleteChapterBtn.disabled = !appState.selectedChapterId;
         }
@@ -1817,7 +1856,7 @@
                             <div class="flex gap-2">
                                 <button data-story-id="${doc.id}" data-story-title="${storyData.title}" class="edit-story-btn bg-tertiary text-white px-3 py-1 text-sm rounded-md hover:bg-tertiary/80"><i class="fa-solid fa-pencil"></i></button>
                                 <button data-story-id="${doc.id}" data-story-title="${storyData.title}" class="load-story-btn bg-accent-blue text-white px-3 py-1 text-sm rounded-md hover:bg-accent-blue/80">Tải</button>
-                                <button data-story-id="${doc.id}" class="delete-story-btn bg-danger/20 text-danger px-3 py-1 text-sm rounded-md hover:bg-danger/40"><i class="fa-solid fa-trash"></i></button>
+                                <button data-story-id="${doc.id}" data-story-title="${storyData.title}" class="delete-story-btn bg-danger/20 text-danger px-3 py-1 text-sm rounded-md hover:bg-danger/40"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         `;
                         listEl.appendChild(storyItem);
@@ -1926,21 +1965,31 @@
             }
         }
 
-        async function deleteStoryFromCloud(storyId) {
-            if (!await showConfirmationModal("Bạn có chắc chắn muốn xóa vĩnh viễn truyện này khỏi Cloud? Hành động này không thể hoàn tác.")) return;
+        async function deleteStoryFromCloud(storyId, storyTitle) {
+            // Thêm tên truyện vào thông báo xác nhận
+            if (!await showConfirmationModal(`Bạn có chắc chắn muốn xóa vĩnh viễn truyện <strong>"${storyTitle}"</strong> khỏi Cloud? Hành động này không thể hoàn tác.`)) return;
+            
             toggleLoading(true);
             try {
                 const storyDocRef = doc(db, "users", userId, "stories", storyId);
-                // Cần xóa subcollection trước
+                // Xóa subcollection các chương trước
                 const chaptersRef = collection(storyDocRef, "chapters");
                 const chaptersSnap = await getDocs(chaptersRef);
                 const batch = writeBatch(db);
                 chaptersSnap.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
-
+                
+                // Xóa document truyện
                 await deleteDoc(storyDocRef);
-                showToast("Đã xóa truyện khỏi Cloud.", 'success');
-                await showStorySelectionModal();
+                showToast(`Đã xóa truyện "${storyTitle}".`, 'success');
+
+                // Nếu truyện bị xóa là truyện đang mở, reset lại
+                if (appState.activeStoryId === storyId) {
+                    resetAppState();
+                    renderAllUI();
+                }
+
+                await showStorySelectionModal(); // Tải lại danh sách
             } catch(error) {
                 console.error("Lỗi xóa truyện:", error);
                 showToast(`Lỗi xóa truyện: ${error.message}`, 'error');
@@ -2650,10 +2699,7 @@
             DOMElements.saveChapterBtn.addEventListener('click', () => {
                 if (appState.selectedChapterId) updateChapter(appState.selectedChapterId, DOMElements.storyContent.innerHTML);
             });
-
-            DOMElements.deleteChapterBtn.addEventListener('click', () => {
-                if (appState.selectedChapterId) deleteChapter(appState.selectedChapterId);
-            });
+            
             DOMElements.deleteAllBtn.addEventListener('click', deleteAllChapters);
             
             // AI Tool buttons
@@ -2798,7 +2844,7 @@
                 }
                 const deleteBtn = e.target.closest('.delete-story-btn');
                 if (deleteBtn) {
-                    deleteStoryFromCloud(deleteBtn.dataset.storyId);
+                    deleteStoryFromCloud(deleteBtn.dataset.storyId, deleteBtn.dataset.storyTitle);
                     return;
                 }
                 const editBtn = e.target.closest('.edit-story-btn');
@@ -2837,6 +2883,32 @@
                 };
                 input.click();
             });
+
+            // Xử lý click vào danh sách chương (chọn chương hoặc tick checkbox)
+            DOMElements.chapterList.addEventListener('click', e => {
+                const checkbox = e.target.closest('.chapter-checkbox');
+                const item = e.target.closest('.chapter-item');
+                if (!item) return;
+
+                const chapterId = item.dataset.chapterId;
+
+                if (checkbox) { // Nếu người dùng click vào checkbox
+                    if (checkbox.checked) {
+                        if (!appState.chaptersToDelete.includes(chapterId)) {
+                            appState.chaptersToDelete.push(chapterId);
+                        }
+                    } else {
+                        appState.chaptersToDelete = appState.chaptersToDelete.filter(id => id !== chapterId);
+                    }
+                    // Hiển thị hoặc ẩn nút "Xóa mục đã chọn"
+                    DOMElements.deleteSelectedChaptersBtn.classList.toggle('hidden', appState.chaptersToDelete.length === 0);
+                } else if (e.target.closest('.has-checkbox')) { // Nếu click vào cả mục chương
+                    selectChapter(chapterId);
+                }
+            });
+
+            // Gán sự kiện cho nút "Xóa mục đã chọn"
+            DOMElements.deleteSelectedChaptersBtn.addEventListener('click', deleteSelectedChapters);
 
         // THÊM CÁC LISTENER MỚI CHO VIỆC ĐĂNG NHẬP
         document.getElementById('login-button').addEventListener('click', loginWithGoogle);
