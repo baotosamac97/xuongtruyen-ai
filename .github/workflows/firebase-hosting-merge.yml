@@ -14,5 +14,3 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_XUONGTRUYEN_AI }}'
           channelId: live
           projectId: xuongtruyen-ai
-
-          testing
